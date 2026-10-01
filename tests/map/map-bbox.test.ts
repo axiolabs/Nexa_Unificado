@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildBbox, isSameBbox } from '../../lib/map-bbox'
+import { DEFAULT_CENTER, DEFAULT_ZOOM } from '../../lib/map-tiles'
 import { MAX_LAT_SPAN, MAX_LNG_SPAN, parseBbox } from '../../lib/validation'
 
 /**
@@ -223,15 +224,36 @@ describe('buildBbox', () => {
     expect(cerca.maxLng - cerca.minLng).toBeLessThan(lejos.maxLng - lejos.minLng)
   })
 
-  it('la caja por defecto cubre los lugares del seed en Buenos Aires', () => {
+  it('la caja por defecto cubre los lugares del seed en Manizales', () => {
     // Si el centro por defecto no cubre el seed, la primera pantalla que ve
     // alguien nuevo esta vacia y parece que la app no tiene datos.
-    const b = buildBbox(BA, 13)
-    const seed = { lat: -34.6037, lng: -58.3816 }
-    expect(b.minLat).toBeLessThan(seed.lat)
-    expect(b.maxLat).toBeGreaterThan(seed.lat)
-    expect(b.minLng).toBeLessThan(seed.lng)
-    expect(b.maxLng).toBeGreaterThan(seed.lng)
+    //
+    // Este test usa `DEFAULT_CENTER` de verdad. Antes usaba la constante `BA` de
+    // arriba, o sea que el titulo mentia: cualquier centro por defecto pasaba
+    // el test, incluido uno que no tuviera nada que ver con el seed. Por eso
+    // `DEFAULT_CENTER` y `DEFAULT_ZOOM` estan importados arriba: si alguien
+    // cambia la ciudad del producto y no actualiza el seed, esto falla.
+    const b = buildBbox(DEFAULT_CENTER, DEFAULT_ZOOM)
+
+    // Coordenadas del seed de `prisma/seed.mjs`. El primero es el centro.
+    const seed = [
+      { lat: 5.0758, lng: -75.5146 }, // Monumento a los Nevados
+      { lat: 5.1519, lng: -75.4925 }, // Parque del Cafe
+      { lat: 5.0706, lng: -75.5209 }, // Museo de Arte Moderno
+      { lat: 5.0731, lng: -75.5188 }, // Biblioteca Publica
+      { lat: 5.0672, lng: -75.5293 }, // Universidad de Caldas
+      { lat: 5.0745, lng: -75.5298 }, // Rio Blanco
+      { lat: 5.0703, lng: -75.5183 }, // Cable Plaza
+      { lat: 5.0843, lng: -75.5495 }, // Termas de Manizales
+    ]
+
+    for (const p of seed) {
+      expect(p.lat, `lat de ${p.lat},${p.lng} fuera de la caja`).toBeGreaterThan(b.minLat)
+      expect(p.lat, `lat de ${p.lat},${p.lng} fuera de la caja`).toBeLessThan(b.maxLat)
+      expect(p.lng, `lng de ${p.lat},${p.lng} fuera de la caja`).toBeGreaterThan(b.minLng)
+      expect(p.lng, `lng de ${p.lat},${p.lng} fuera de la caja`).toBeLessThan(b.maxLng)
+    }
+
     // Y que entre en la caja de la API sin reventar el limite de amplitud.
     expect(b.maxLat - b.minLat).toBeLessThan(180)
     expect(b.maxLng - b.minLng).toBeLessThan(360)

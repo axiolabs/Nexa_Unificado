@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { hashPassword } from '../../lib/auth/password'
-import { OSM_ATTRIBUTION, resolveTileConfig } from '../../lib/map-tiles'
+import { buildBbox } from '../../lib/map-bbox'
+import { DEFAULT_CENTER, DEFAULT_ZOOM, OSM_ATTRIBUTION, resolveTileConfig } from '../../lib/map-tiles'
 import { Client } from '../helpers/http'
 import { addRole, closeDb, createPlace, createPlan, createUser, resetDb } from '../helpers/db'
 
@@ -19,7 +20,18 @@ import { addRole, closeDb, createPlace, createPlan, createUser, resetDb } from '
  */
 
 const PASSWORD = 'correcto-caballo-grapa-42'
-const BA = '-58.50,-34.65,-58.30,-34.55'
+
+/**
+ * La caja que el navegador pide en la primera carga: la que sale del centro por
+ * defecto. Se CALCULA en vez de estar escrita a mano, porque si esta escrita a
+ * mano el test sigue pasando cuando `DEFAULT_CENTER` se mueve a otra ciudad, y
+ * ese es justo el error que hay que cazar (el seed en una ciudad y el centro en
+ * otra deja el mapa vacio sin que nada falle).
+ */
+const CAJA_POR_DEFECTO = (() => {
+  const b = buildBbox(DEFAULT_CENTER, DEFAULT_ZOOM)
+  return [b.minLng, b.minLat, b.maxLng, b.maxLat].join(',')
+})()
 
 let ana: { id: string; email: string }
 let beto: { id: string; email: string }
@@ -29,7 +41,10 @@ beforeEach(async () => {
   const passwordHash = await hashPassword(PASSWORD)
   ana = await createUser({ email: 'ana@example.com', name: 'Ana Ruiz', passwordHash, roles: ['USER'] })
   beto = await createUser({ email: 'beto@example.com', name: 'Beto Diaz', passwordHash, roles: ['USER'] })
-  const place = await createPlace({ name: 'Cafe Tortuga', lat: -34.6037, lng: -58.3816 })
+  // Coordenadas dentro de la caja por defecto (Manizales), no en Buenos Aires:
+  // un fixture fuera de la caja hace que el test valide "el filtro anda bien"
+  // cuando en realidad esta probando que el filtro descarta todo.
+  const place = await createPlace({ name: 'Cafe Tortuga', lat: 5.0703, lng: -75.5183 })
   await createPlan({ placeId: place.id, creatorId: ana.id, capacity: 4, acceptedCount: 1 })
 })
 
@@ -111,10 +126,10 @@ describe('GET /explore', () => {
     expect(res.text).not.toContain('Plan de prueba')
   })
 
-  it('la caja por defecto cubre Buenos Aires y trae los lugares del seed', async () => {
-    // El centro por defecto tiene que incluir los 8 lugares del seed, o la
-    // primera pantalla que ve un usuario nuevo esta vacia y parece rota.
-    const res = await new Client().get(`/api/places?bbox=${BA}`)
+  it('la caja por defecto cubre Manizales y trae los lugares', async () => {
+    // El centro por defecto tiene que incluir los lugares, o la primera
+    // pantalla que ve un usuario nuevo esta vacia y parece rota.
+    const res = await new Client().get(`/api/places?bbox=${CAJA_POR_DEFECTO}`)
     expect(res.status).toBe(200)
     const places = (res.body as { places: unknown[] }).places
     expect(places.length).toBeGreaterThan(0)

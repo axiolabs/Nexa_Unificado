@@ -67,9 +67,15 @@ export function resolveTileConfig(): TileConfig {
 /**
  * Centro del mapa al abrir /explore.
  *
- * Es Buenos Aires porque es la ciudad que el producto tiene en la cabeza al
- * empezar, no porque haya datos. Los lugares reales los decide el seed; este
- * valor solo define de donde se mira la primera vez.
+ * Es Manizales porque es la ciudad que el producto tiene en la cabeza, y por
+ * coherencia con el seed: si esto fuera otra ciudad y el seed sembrara lugares
+ * de esta, el mapa abriria en un vacio y pareceria que no hay nada.
+ *
+ * Este valor solo define de donde se mira la primera vez. NO acota el mapa: el
+ * `bbox` sigue siendo libre y se puede mover a cualquier lado, a proposito. La
+ * decision de "esto es de Manizales" se aplica con el filtro de ciudad, no
+ * encerrando el mapa: encerrarlo obliga a validar cada escritura de lugar y
+ * deja de ser un cambio de coordenadas.
  */
-export const DEFAULT_CENTER = { lat: -34.6037, lng: -58.3816 }
+export const DEFAULT_CENTER = { lat: 5.0703, lng: -75.5183 }
 export const DEFAULT_ZOOM = 13
