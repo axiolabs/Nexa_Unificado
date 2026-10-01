@@ -15,7 +15,7 @@ import type { PlanStatusValue } from './plans'
 
 export type DecisionUnirse =
   /** No hay nada que pedir. Se muestra un texto y listo. */
-  | { tipo: 'informativo'; texto: string; tono: 'ok' | 'note' }
+  | { tipo: 'informativo'; texto: string; tono: TonoMensaje | 'note' }
   /** Hay algo que pedir: el boton. `nota` es la aclaracion de abajo. */
   | { tipo: 'solicitar'; etiqueta: string; nota: string | null }
 
@@ -57,7 +57,10 @@ export function decidirUnirse(
   if (yaEsta === 'REQUESTED') {
     return {
       tipo: 'informativo',
-      tono: 'ok',
+      // Neutro, y no `ok` como estaba: pedir no es Confirmation. En verde esta
+      // pantalla le dice al usuario que ya entro, que es exactamente la mentira
+      // que el texto del boton ("Pedir no es entrar") intenta evitar.
+      tono: 'neutro',
       texto: 'Pediste unirte. Esperando que el organizador responda.',
     }
   }
@@ -131,7 +134,17 @@ export type TonoMensaje = 'ok' | 'neutro' | 'error'
 export const MENSAJES_POR_ESTADO: Record<string, { texto: string; tono: TonoMensaje }> = {
   // Pedir no es un error ni un exito: es una espera. Verde ("ya estas") seria
   // mentir, y rojo seria alarma.
-  REQUESTED: { texto: 'Pediste unirte. El organizador tiene hasta 24 horas para responder.', tono: 'neutro' },
+  //
+  // El orden de la oracion importa mas que la palabra "error". Decir "tiene
+  // hasta 24 horas" primero pone el reloj como protagonista, y eso invita a
+  // calcular y a esperar ansioso. Ademas el texto NO promete aviso: hoy no
+  // hay notificaciones push, asi que decir "te avisamos" seria hacer creer que
+  // va a llegar algo y, cuando nadie avise, generar mas ansiedad que el
+  // silencio. Lo que si es cierto es que puede volver cuando quiera.
+  REQUESTED: {
+    texto: 'Pediste unirte. Podes volver a revisar cuando quieras: el organizador tiene como maximo 24 horas para responder.',
+    tono: 'neutro',
+  },
   ACCEPTED: { texto: 'Ya estas confirmado.', tono: 'ok' },
   // "Ya estuviste" es un hecho, no un problema.
   ATTENDED: { texto: 'Ya estuviste en este plan.', tono: 'neutro' },

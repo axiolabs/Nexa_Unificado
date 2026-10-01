@@ -194,6 +194,17 @@ describe('decidirUnirse', () => {
     expect(confirmado.tono).toBe('ok')
     expect(rechazado.tono).toBe('note')
   })
+
+  it('pedir y estar esperando no se anuncian como un logro', () => {
+    // El estado PERSISTENTE (volves manana y lo seguis viendo) y el mensaje
+    // que aparece al pedir (transitorio) cuentan lo mismo. Si uno queda en
+    // `ok` y el otro no, el mismo hecho se ve de dos colores distintos.
+    const esperando = pedir('REQUESTED')
+    if (esperando.tipo !== 'informativo') throw new Error('deberia ser informativo')
+    expect(esperando.tono, 'esperando').toBe('neutro')
+    expect(esperando.tono, 'esperando').not.toBe('ok')
+    expect(MENSAJES_POR_ESTADO.REQUESTED.tono).toBe(esperando.tono)
+  })
 })
 
 describe('los mensajes de un 409 con estado', () => {
@@ -206,6 +217,23 @@ describe('los mensajes de un 409 con estado', () => {
     expect(MENSAJES_POR_ESTADO.CANCELLED.texto).toContain('dado de baja')
     expect(MENSAJES_POR_ESTADO.NO_SHOW.texto).toContain('asistencia')
     expect(MENSAJES_POR_ESTADO.ATTENDED.texto).toContain('estuviste')
+  })
+
+  it('el texto de pedir no promete un aviso que no existe', () => {
+    // Hoy no hay notificaciones push: el usuario se entera volviendo a entrar.
+    // Prometerle "te avisamos" y despues no avisarle genera MAS ansiedad que
+    // el silencio, porque encima lo deja creyendo que perdio algo.
+    expect(MENSAJES_POR_ESTADO.REQUESTED.texto).not.toMatch(/te avis|avisaremos|te vamos a avisar|te notific|te llega/i)
+  })
+
+  it('el texto de pedir no pone el reloj como protagonista', () => {
+    // "Tiene hasta 24 horas" al principio invita a hacer cuentas y a esperar
+    // ansioso. Lo que el usuario controla -poder volver cuando quiera- va
+    // primero, y el plazo queda como dato secundario.
+    const texto = MENSAJES_POR_ESTADO.REQUESTED.texto
+    expect(texto.startsWith('Pediste unirte.')).toBe(true)
+    expect(texto).toMatch(/24 horas/)
+    expect(texto.indexOf('Podes volver')).toBeLessThan(texto.indexOf('24 horas'))
   })
 
   it('ningun texto promete entrar sin organizacion', () => {

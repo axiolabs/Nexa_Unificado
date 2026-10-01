@@ -102,9 +102,11 @@ export function PlanDetailClient({ planId }: { planId: string }) {
       // el `body.error` queda vacio y el mensaje sale del status.
       const body = (await res.json().catch(() => ({}))) as (JoinOk & JoinChoque) & { error?: string }
       if (res.status === 201) {
+        // El texto sale del mapa y no de aca: estaba duplicado, y dos copias
+        // de la misma frase es una forma garantizada de que una quede vieja.
         setMensaje({
-          tipo: 'ok',
-          texto: 'Pediste unirte. El organizador tiene hasta 24 horas para responder.',
+          tipo: MENSAJES_POR_ESTADO.REQUESTED.tono,
+          texto: MENSAJES_POR_ESTADO.REQUESTED.texto,
         })
         await cargar()
         return
@@ -365,6 +367,21 @@ export function PlanDetailClient({ planId }: { planId: string }) {
  * devuelve `planIsFull`. Cancelar en el peor momento libera el lugar para otro,
  * asi que el plan lleno avisa, no bloquea.
  */
+/**
+ * Que clase CSS lleva cada tono.
+ *
+ * Antes era un ternario de dos casos (`ok` o `note`) y cualquier tono nuevo
+ * caia en `note` por defecto, que es como un `REQUESTED` en neutro terminó
+ * dibujandose verde. Con el mapa, sumar un tono es agregar una fila y el
+ * compilador avisa si falta una.
+ */
+const CLASE_POR_TONO: Record<TonoMensaje | 'note', string> = {
+  ok: 'msg ok',
+  neutro: 'msg neutro',
+  error: 'msg error',
+  note: 'note',
+}
+
 function BotonUnirse({
   plan,
   yaEsta,
@@ -387,7 +404,7 @@ function BotonUnirse({
   )
 
   if (decision.tipo === 'informativo') {
-    return <p className={decision.tono === 'ok' ? 'msg ok' : 'note'}>{decision.texto}</p>
+    return <p className={CLASE_POR_TONO[decision.tono]}>{decision.texto}</p>
   }
 
   return (
