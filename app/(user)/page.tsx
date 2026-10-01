@@ -137,11 +137,11 @@ export default function Home() {
       >
         <label>
           Email
-          <input name="loginEmail" type="email" required placeholder="ana@example.com" />
+          <input name="email" type="email" required placeholder="ana@example.com" />
         </label>
         <label>
           Contrasena
-          <input name="loginPassword" type="password" required />
+          <input name="password" type="password" required />
         </label>
         <button disabled={busy}>Entrar</button>
       </form>
