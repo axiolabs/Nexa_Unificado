@@ -373,6 +373,43 @@ select:focus-visible {
   white-space: nowrap;
 }
 
+/**
+ * Lista de destinos de la pantalla de sesion iniciada.
+ *
+ * El boton y la explicacion van en columna, no en fila, porque el `.plan-go` de
+ * arriba es un boton chico pensado para meterse al lado de un texto. Con la
+ * explicacion al lado, "Organizar un plan"+"Crear planes y ver quien se sumo" no
+ * entra ni en una pantalla chica, y ademas la pista queda pegada al texto sin
+ * que se sepa que explica. En columna cada destino es un bloque y se lee de
+ * arriba abajo, que es como se lee una lista de cosas para hacer.
+ *
+ * `.plan-go` se estira con `width: 100%` porque el que manda en el ancho es el
+ * `<li>`, y sin esto el boton queda del tamano de su texto mientras la
+ * explicacion ocupa el resto de la linea y se ve desalineado.
+ */
+.nav-list {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.nav-list .plan-go {
+  width: 100%;
+  white-space: normal;
+  text-align: left;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.nav-hint {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .plan-go:hover {
   border-color: var(--accent);
   color: var(--accent);
