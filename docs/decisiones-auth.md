@@ -468,7 +468,23 @@ viejo y den verde por el motivo equivocado. Es el mismo motivo por el que
 
 | # | Deuda | Por que esta anotada | Dispara migracion cuando |
 |---|---|---|---|
-| 1 | `middleware.ts` -> `proxy.ts` | Next 16 lo deprecia. Migracion mecanica con `npx @next/codemod middleware-to-proxy`, no es un riesgo de diseno. | Next saque el soporte, o toquemos el matcher |
+| 1 | **`middleware.ts` -> `proxy.ts`. AGENDADA, no anotada al paso.** Next 16 lo deprecia y el aviso aparece en cada `next dev`. Migracion mecanica con `npx @next/codemod middleware-to-proxy`, no es un riesgo de diseno. Hay que hacerla en un commit propio, con la suite completa en verde antes y despues, porque toca el archivo que corre antes de resolver cada ruta y por eso el mas caro de probar de todos. | Se actualiza un dia sin que nadie lo lea en el log, y el cambio se mezcla con otro sin que se note que era el archivo de autorizacion | **Ya deberia estar hecha.** No es urgente pero no crece: cada mencion "de paso" es una mencion menos |
+
+### 11.0 Tarea agendada: migrar `middleware.ts` a `proxy.ts`
+
+Salio de la lista de "deuda anotada" porque quedarse en la mencion de paso es
+como no agenda nada: sigue apareciendo en cada `next dev` y nadie lo ataca. El trabajo
+concreto, en este orden:
+
+1. `npx @next/codemod middleware-to-proxy`
+2. Revisar el `matcher`: la exclusion de `/api` es deliberada (ver seccion 7) y
+   el codemod no debe perderla.
+3. Confirmar que no quedo ningun import del modulo viejo en el arbol.
+4. `npm run check` y la suite completa en verde.
+
+Lo que **no** hay que hacer aca: mezclarlo con un cambio de comportamiento.
+Es un rename de archivo y de export, y la tentacion de "de paso arreglar algo mas
+mientras estoy" es exactamente lo que haria que un revert fuera dificil.
 | 2 | **Notificacion al organizador** (push al pedir + recordatorio a mitad de plazo) | Ver 11.1. Depende de una decision de canal que no esta tomada. | Hay decision de canal |
 | 3 | `acceptedCount` desnormalizado | El spec §8 lo justifica: hace el check de cupo en O(1) dentro de la transaccion. Cuesta una invariante que hay que auditar, no un Atajo. | El plan se vuelva grande y el `COUNT` deje de doler |
 | 4 | 4 vulnerabilidades altas del CLI de Prisma | Transitivas, sin parche upstream. `npm audit fix --force` romperia Prisma. | Prisma las arregle |
