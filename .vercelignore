@@ -1,0 +1,19 @@
+# Lo que NO debe viajar en un deploy de la CLI.
+#
+# `vercel deploy` sube el directorio de trabajo tal cual. Los deploys que salen
+# de GitHub no tienen este problema (clonan el repo, y ahi `.env` esta
+# git-ignored), pero los de la CLI si: sin este archivo, el `.env` local
+# -- con la password de la base de desarrollo y el SESSION_SECRET local --
+#viaja dentro del deployment, y Next lo carga en runtime. Como las variables de
+#Vercel ya estan definidas, no pisa nada y el sitio parece funcionar, lo que
+# hace que el secreto filtrado pase desapercibido.
+.env
+.env.local
+.env.test
+
+# Contexto de Neon (orgId, projectId, branch). No es un secreto, pero es
+# configuracion de esta maquina.
+.neon
+
+node_modules
+.next
