@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Un workflow por commit. Cancelar el anterior evita gastar minutos de runner
+# en un push que ya quedo obsoleto por el siguiente.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://nexa:nexa@127.0.0.1:5432/nexa_test
+  SESSION_SECRET: ci-secret-de-64-caracteres-minimo-para-firmar-hmac-sha256!!
+  APP_ORIGIN: http://127.0.0.1:3100
+  NODE_ENV: test
+  CI: 'true'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: nexa
+          POSTGRES_PASSWORD: nexa
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        # Sin esto el job arranca antes de que Postgres acepte conexiones y
+        # falla con un error de conexion que no dice nada sobre su causa.
+        options: >-
+          --health-cmd "pg_isready -U nexa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Crear la base de tests y aplicar migraciones
+        # El script exige que el nombre termine en `_test` y se niega a tocar
+        # cualquier otra base. En CI corre contra nexa_test, recien creada.
+        run: node scripts/create-test-db.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # `pretest` ya compila antes de los tests, porque los tests de
+      # autorizacion corren contra `next start` sobre `.next`: sin recompilar,
+      # un cambio en middleware.ts o en un route handler no llega al bundle y
+      # la suite puede dar verde sobre codigo viejo.
+      - name: Tests
+        run: npm test

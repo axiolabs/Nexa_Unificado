@@ -1,0 +1,886 @@
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #16161a;
+  --muted: #6b6b76;
+  --line: #e2e2e8;
+  --accent: #2f5bd7;
+  --danger: #b42318;
+  --ok: #0f7b3d;
+  /* Superficies Elevated, para burbujas de chat y tarjetas. */
+  --raised: #f4f4f7;
+  --raised-accent: #e8eefc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101014;
+    --fg: #ececf1;
+    --muted: #9a9aa6;
+    --line: #2a2a33;
+    --accent: #7ea1ff;
+    --danger: #ff8a80;
+    --ok: #5fd39a;
+    --raised: #1c1c24;
+    --raised-accent: #1e2740;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+main {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 3rem 1.25rem 5rem;
+}
+
+h1 {
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+  margin: 2.25rem 0 0.75rem;
+}
+
+p.lede {
+  color: var(--muted);
+  margin: 0 0 2rem;
+}
+
+form {
+  display: grid;
+  gap: 0.85rem;
+  max-width: 26rem;
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+input {
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  font: inherit;
+  font-weight: 500;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  justify-self: start;
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.msg {
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  border: 1px solid var(--line);
+  white-space: pre-wrap;
+}
+
+.msg.error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.msg.ok {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3rem 1rem;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+dt {
+  color: var(--muted);
+}
+
+dd {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+
+code,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+pre {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  border-left: 2px solid var(--line);
+  padding-left: 0.85rem;
+}
+
+.shellbar {
+  display: flex;
+  gap: 0.85rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  padding-bottom: 0.9rem;
+  margin-bottom: 1.6rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+
+.shellbar-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.shellbar-roles {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.shellbar-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.shellbar-link:hover {
+  text-decoration: underline;
+}
+
+/* --- /explore ------------------------------------------------------------ */
+
+.explore {
+  max-width: 60rem;
+}
+
+select {
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.85rem;
+  align-items: end;
+  margin: 0 0 1.1rem;
+  max-width: none;
+}
+
+.filters button {
+  align-self: end;
+}
+
+.map-wrap {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/*
+ * Altura explicita y `position: relative`: Leaflet necesita las dos. Con
+ * `height: 100%` y un padre sin altura, el mapa mide 0 y las teselas no cargan,
+ * que es el sintoma clasico de "el mapa no me funciona".
+ */
+.map,
+.map-skeleton {
+  height: 26rem;
+  width: 100%;
+}
+
+.map-skeleton {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+@media (max-width: 40rem) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .map,
+  .map-skeleton {
+    height: 20rem;
+  }
+}
+
+.plan-list,
+.place-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+/* El `li` de las listas de /explore no debe tener la sangria del `ul` base. */
+.plan-card,
+.place-card {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+}
+
+.plan-card:hover,
+.place-card:hover {
+  border-color: var(--accent);
+}
+
+.plan-list li.is-selected .plan-card {
+  border-color: var(--accent);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/*
+ * El plan del listado tiene DOS acciones, y no pueden ser el mismo elemento: una
+ * mueve el mapa (es un `button`) y la otra lleva al detalle (es un `Link`). Un
+ * enlace dentro de un boton es HTML invalido y se rompe con el teclado, asi que
+ * el `li` se vuelve una fila: la tarjeta toma el ancho y el enlace se queda al
+ * costado.
+ */
+.plan-list li:has(.plan-card) {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.plan-list li > .plan-card {
+  flex: 1;
+  min-width: 0;
+}
+
+/*
+ * El enlace al detalle parece una etiqueta, no un boton: el boton de la tarjeta
+ * ya tiene borde, y dos cajas con borde en la misma fila gritan "elegí una" para
+ * dos cosas que no compiten. Ademas, el texto dice "Ver plan", asi que la forma
+ * acompana en vez de contradecir.
+ */
+.plan-go {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.plan-go:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.plan-meta {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* Leaflet pinta sus propios controles; el borde del contenedor los corta. */
+.leaflet-container {
+  font: inherit;
+  background: var(--bg);
+}
+
+/* --- /host/planes/nuevo ---------------------------------------------------- */
+
+/*
+ * `form` base tiene `max-width: 26rem`, que para un formulario de dos columnas
+ * de fechas queda corto. El override va en la clase, no en `form`, para no
+ * cambiar el ancho de los formularios de login que si lo necesitan angostos.
+ */
+.plan-form {
+  max-width: 38rem;
+}
+
+.plan-form textarea {
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  resize: vertical;
+}
+
+.plan-form textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.plan-form .row label {
+  flex: 1 1 12rem;
+}
+
+/*
+ * El error de campo va DENTRO del label, debajo del input, y no en un banner
+ * arriba: el mensaje tiene que quedar pegado al control que lo provoco, o el
+ * usuario tiene que adivinar a que campo corresponde "La hora de fin tiene que
+ * ser posterior a la de inicio".
+ */
+.field-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+.picker {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.9rem 1rem 1rem;
+  margin: 0 0 0.5rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.picker legend {
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding: 0 0.35rem;
+}
+
+.place-chip {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+}
+
+/* --- /planes/[planId] ------------------------------------------------------ */
+
+/*
+ * Reutiliza `.place-card` y `.plan-meta` a proposito. La ficha de un plan en el
+ * mapa y la de un participante en el detalle son el mismo objeto visual, y
+ * duplicar el CSS para dos pantallas que se ven iguales es como se empieza a
+ * notar que una cambio y la otra no.
+ */
+.plan-detail section {
+  margin: 0 0 1.5rem;
+}
+
+.plan-detail h2 {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+/*
+ * El bloque de unirse se separa con un borde arriba. Es la unica accion de la
+ * pagina, y tiene que quedar localizable sin recorrer la lista de confirmados.
+ */
+.plan-join {
+  border-top: 1px solid var(--line);
+  padding-top: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.plan-join .msg {
+  margin: 0.75rem 0 0;
+}
+
+/*
+ * Cerrar el plan: la lista de asistencia y la calificacion.
+ *
+ * Mismo borde que `.chat` y `.plan-join` por la misma razon: son bloques de la
+ * misma pagina y sin el separador quedan pegados con el mismo peso visual. Y
+ * `.plan-closing` se usa para los dos, y tambien para el renglon que le dice a un
+ * `NO_SHOW` que no puede calificar, para que ese caso no aparezca como algo
+ * distinto de lo que es: la misma seccion, sin el formulario.
+ */
+.plan-closing {
+  border-top: 1px solid var(--line);
+  padding-top: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+/*
+ * Los dos botones de marcar, uno al lado del otro.
+ *
+ * La tarjeta de cada persona es un `grid` de una columna (`.place-card`), asi que
+ * los botones caen debajo del nombre en vez de al lado. Se acepta: la fila queda
+ * mas alta y el boton esta a la altura del pulgar en vez de en el borde, que es
+ * donde lo va a buscar quien esta completando una lista mirando nombres.
+ */
+.attendance-buttons {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.attendance-buttons button {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+/*
+ * La estrella prendida se distingue por el color Y por el `aria-pressed` del
+ * boton, no solo por el color. Una lista de cinco estrellas todas iguales es
+ * indistinguible para quien navega con lector de pantalla, y "4 de 5" necesita
+ * poder leerse.
+ */
+.rating-stars {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.5rem 0;
+}
+
+.rating-stars .star {
+  flex: 1;
+  padding: 0.4rem 0;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.rating-stars .star.on {
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+/*
+ * Etiquetas: el mismo "chip" en los tres lugares donde aparecen — elegir, el
+ * resumen agregado y las de cada voto — para que se lea como un sistema y no
+ * como tres inventos. Reemplaza al `textarea` del comentario (§16.10), asi que
+ * no hay nada que limpiar: este bloque es lo unico que hay que mirar.
+ *
+ * El chip pulsado usa el color de acento, que ya distingue "elegido" en las
+ * estrellas de arriba. Reutilizar ese color en vez de inventar otro es lo que
+ * hace que el estado se entienda sin explicarlo.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.6rem;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chip.on {
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+/*
+ * Apagado en vez de invisible cuando se llega al tope de tres: si las que quedan
+ * desaparecieran, el limite seria magico y en un lector de pantalla el grupo
+ * cambiaria de largo sin avisar. Apagadas se ve que existen y que no entran.
+ */
+.chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rating-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.35rem;
+}
+
+.rating-tags-resumen,
+.rating-tags-voto {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.4rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* En el resumen y en los votos el chip es informacion, no un control. */
+.rating-tags-resumen .chip,
+.rating-tags-voto .chip {
+  cursor: default;
+}
+
+.rating-tags-resumen {
+  margin-top: 0.25rem;
+}
+
+/*
+ * Texto que esta en la pagina pero no se ve: el "de 5" de una fila de
+ * calificaciones. `*****` a secas no le dice nada a quien navega con lector de
+ * pantalla, y el promedio si dice "4 de 5" en voz alta, asi que sin esto la
+ * fila suena a una tira de asteriscos.
+ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* La lista de comentarios del organizador, debajo de su propio formulario. */
+.rating-detalle {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.rating-detalle h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+/*
+ * El chat.
+ *
+ * Va antes de `.plan-join` en el flujo, y por eso necesita su propio borde
+ * arriba: sin el, la lista de confirmados, el chat y el boton de unirse quedan
+ * como tres bloques pegados del mismo peso visual.
+ */
+.chat {
+  border-top: 1px solid var(--line);
+  padding-top: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+/*
+ * La lista tiene alto fijo y scrollea sola, en vez de crecer con la
+ * conversacion: el chat vive debajo del detalle del plan, y si la lista creciera
+ * sin limite habria que scrollear la pagina entera para llegar al campo de
+ * escribir.
+ */
+.chat-lista {
+  max-height: 22rem;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.chat-msj {
+  max-width: 85%;
+  padding: 0.45rem 0.7rem;
+  border-radius: 10px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+}
+
+.chat-msj-mio {
+  align-self: flex-end;
+  background: var(--raised-accent);
+  border-color: var(--accent);
+}
+
+.chat-msj-otro {
+  align-self: flex-start;
+}
+
+/* El autor solo aparece en los mensajes ajenos: en el propio sobra. */
+.chat-autor {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.15rem;
+}
+
+.chat-cuerpo {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * `overflow-wrap: anywhere` y no solo `word-wrap`: sin el, un texto largo sin
+ * espacios (un enlace pegado) estira la burbuja hasta el ancho de la pagina en
+ * lugar de partirse.
+ */
+.chat-hora {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+  text-align: right;
+}
+
+.chat-form {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.chat-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.chat-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  resize: vertical;
+}
+
+.chat-cuenta {
+  margin: 0;
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.chat-form button {
+  align-self: flex-end;
+}
+
+
+/* --- personalidad ---------------------------------------------------------- */
+
+/*
+ * El recordatorio del mapa. Deliberadamente chiquito: una linea, un enlace y
+ * una X. Si competing con el mapa por atencion, es un recordatorio que molesta, y
+ * un recordatorio que molesta teaches a ignorar el banner.
+ */
+.recordatorio {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.recordatorio-go {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.recordatorio-x {
+  margin-left: auto;
+  padding: 0 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.recordatorio-x:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Una pregunta, cinco opciones: el `fieldset` aparta el prompt del resto. */
+.test-pregunta {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.1rem 1.1rem;
+  margin: 1rem 0;
+}
+
+.test-pregunta legend {
+  padding: 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+/*
+ * La opcion elegida se marca por el borde, no solo por el radio: el radio native
+ * es pequeno y en una fila de cinco es dificil ver cual esta marcada de un
+ * vistazo.
+ */
+.opcion {
+  display: block;
+  padding: 0.55rem 0.7rem;
+  margin-top: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+
+.opcion:hover {
+  border-color: var(--accent);
+}
+
+.opcion.elegida {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.rasgos {
+  margin: 1rem 0;
+}
+
+.rasgo {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.rasgo dt {
+  font-weight: 600;
+}
+
+.rasgo dd {
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+}
+
+.nivel {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.nivel-muy_bajo,
+.nivel-bajo {
+  color: var(--muted);
+}
+
+.nivel-alto,
+.nivel-muy_alto {
+  color: var(--accent);
+}
+
+/* Solicitudes del organizador. La lista de a uno con sus acciones al lado: la
+   fila es la unidad de decision, no el plan entero. */
+.solicitudes {
+  margin-top: 1.5rem;
+}
+
+.solicitud-lista {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.solicitud {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.solicitud-cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.solicitud-datos {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.2rem 0.75rem;
+  margin: 0.6rem 0 0.8rem;
+  font-size: 0.9rem;
+}
+
+.solicitud-datos dt {
+  color: var(--muted);
+}
+
+.solicitud-datos dd {
+  margin: 0;
+}
+
+.solicitud-acciones {
+  display: flex;
+  gap: 0.5rem;
+}

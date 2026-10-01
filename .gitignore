@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+
+# Secrets: .env tiene SESSION_SECRET y la password de la DB.
+# .env.test tambien lleva SESSION_SECRET: no va versionado, se copia de
+# .env.test.example. Versionarlo filtraria la credencial de la base de test.
+.env
+.env.local
+.env.test
+.env*.local
+
+# Build de Next
+.next/
+out/
+next-env.d.ts
+
+# Prisma: el Client generado se regenera con `npm run db:generate`.
+# No se versiona generated/
+/prisma/generated/
+
+# Depuracion
+*.tsbuildinfo
+
+# Sistema
+.DS_Store
+Thumbs.db

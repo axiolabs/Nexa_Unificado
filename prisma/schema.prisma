@@ -1,0 +1,340 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  HOST
+  MODERATOR
+  CURATOR
+  ADMIN
+}
+
+enum PlanTier {
+  FREE
+  PREMIUM
+}
+
+enum PlaceCategory {
+  CAFE
+  RESTAURANT
+  MUSEUM
+  PARK
+  WORKSHOP
+  SPORTS
+  BAR
+  LIBRARY
+  OTHER
+}
+
+enum PriceLevel {
+  FREE
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PlaceVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PlanStatus {
+  OPEN
+  CANCELLED
+  COMPLETED
+}
+
+enum ParticipantRole {
+  ORGANIZER
+  PARTICIPANT
+}
+
+enum ParticipationStatus {
+  REQUESTED
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  ATTENDED
+  NO_SHOW
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  emailVerifiedAt DateTime?
+  passwordHash    String?
+  name            String
+  avatarUrl       String?
+  planTier        PlanTier  @default(FREE)
+  premiumUntil    DateTime?
+  isActive        Boolean   @default(true)
+  suspendedAt     DateTime?
+  suspendedReason String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  roles              UserRoleAssignment[]
+  accounts           AuthAccount[]
+  ownedPlaces        Place[]
+  createdPlans       Plan[]               @relation("PlanCreator")
+  participations     PlanParticipant[]
+  ratings            Rating[]
+  personalityResults PersonalityResult[]
+  deletedMessages    Message[]            @relation("MessageDeleter")
+
+  @@index([planTier])
+  @@index([emailVerifiedAt])
+}
+
+model UserRoleAssignment {
+  userId      String
+  role        UserRole
+  grantedAt   DateTime @default(now())
+  grantedById String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, role])
+  @@index([role])
+}
+
+model AuthAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Trait {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  label       String
+  category    String
+  description String?
+
+  questions   PersonalityQuestion[]
+  placeTraits PlaceTrait[]
+  scores      PersonalityScore[]
+}
+
+model Place {
+  id                 String                  @id @default(cuid())
+  name               String
+  description        String?
+  category           PlaceCategory
+  priceLevel         PriceLevel
+  address            String?
+  city               String?
+  latitude           Decimal                 @db.Decimal(9, 6)
+  longitude          Decimal                 @db.Decimal(9, 6)
+  timezone           String
+  verificationStatus PlaceVerificationStatus @default(PENDING)
+  verifiedById       String?
+  verifiedAt         DateTime?
+  ownerId            String?
+  isActive           Boolean                 @default(true)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  deletedAt          DateTime?
+
+  owner  User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  traits PlaceTrait[]
+  plans  Plan[]
+
+  @@index([verificationStatus, category, priceLevel])
+  @@index([city])
+  @@index([latitude, longitude])
+  @@index([ownerId])
+}
+
+model PlaceTrait {
+  placeId String
+  traitId String
+  weight  Float
+
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  trait Trait @relation(fields: [traitId], references: [id], onDelete: Cascade)
+
+  @@id([placeId, traitId])
+  @@index([traitId])
+}
+
+model PersonalityTest {
+  id          String    @id @default(cuid())
+  version     Int       @unique
+  name        String
+  isActive    Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  questions PersonalityQuestion[]
+  results   PersonalityResult[]
+}
+
+model PersonalityQuestion {
+  id      String @id @default(cuid())
+  testId  String
+  prompt  String
+  order   Int
+  traitId String
+
+  test    PersonalityTest     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  trait   Trait               @relation(fields: [traitId], references: [id], onDelete: Restrict)
+  options PersonalityOption[]
+
+  @@unique([testId, order])
+  @@index([traitId])
+}
+
+model PersonalityOption {
+  id         String @id @default(cuid())
+  questionId String
+  label      String
+  scoreDelta Float
+  order      Int
+
+  question PersonalityQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  PersonalityAnswer[]
+
+  @@unique([questionId, order])
+}
+
+model PersonalityResult {
+  id          String   @id @default(cuid())
+  userId      String
+  testId      String
+  completedAt DateTime @default(now())
+
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test    PersonalityTest     @relation(fields: [testId], references: [id], onDelete: Restrict)
+  answers PersonalityAnswer[]
+  scores  PersonalityScore[]
+
+  @@unique([userId, testId])
+  @@index([userId, completedAt])
+}
+
+model PersonalityAnswer {
+  id       String @id @default(cuid())
+  resultId String
+  optionId String
+
+  result PersonalityResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  option PersonalityOption @relation(fields: [optionId], references: [id], onDelete: Restrict)
+
+  @@unique([resultId, optionId])
+}
+
+model PersonalityScore {
+  id       String @id @default(cuid())
+  resultId String
+  traitId  String
+  value    Float
+
+  result PersonalityResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  trait  Trait             @relation(fields: [traitId], references: [id], onDelete: Cascade)
+
+  @@unique([resultId, traitId])
+  @@index([traitId])
+}
+
+model Plan {
+  id            String     @id @default(cuid())
+  title         String
+  description   String?
+  placeId       String
+  creatorId     String
+  startsAt      DateTime
+  endsAt        DateTime?
+  capacity      Int
+  acceptedCount Int        @default(0)
+  status        PlanStatus @default(OPEN)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  deletedAt     DateTime?
+
+  place        Place             @relation(fields: [placeId], references: [id], onDelete: Restrict)
+  creator      User              @relation("PlanCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  participants PlanParticipant[]
+  messages     Message[]
+  ratings      Rating[]
+
+  @@index([placeId, startsAt])
+  @@index([creatorId, createdAt])
+  @@index([status, startsAt])
+}
+
+model PlanParticipant {
+  planId         String
+  userId         String
+  role           ParticipantRole     @default(PARTICIPANT)
+  status         ParticipationStatus @default(REQUESTED)
+  joinedAt       DateTime            @default(now())
+  respondedAt    DateTime?
+  expiresAt      DateTime?
+  reminderSentAt DateTime?
+
+  plan     Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  messages Message[]
+  ratings  Rating[]
+
+  @@id([planId, userId])
+  @@index([userId, status])
+  @@index([planId, status])
+  @@index([status, expiresAt])
+}
+
+model Message {
+  id          String    @id @default(cuid())
+  planId      String
+  authorId    String
+  body        String
+  createdAt   DateTime  @default(now())
+  editedAt    DateTime?
+  deletedAt   DateTime?
+  deletedById String?
+
+  plan          Plan            @relation(fields: [planId], references: [id], onDelete: Cascade)
+  participacion PlanParticipant @relation(fields: [planId, authorId], references: [planId, userId], onDelete: Cascade)
+  deletedBy     User?           @relation("MessageDeleter", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  @@index([planId, createdAt])
+}
+
+model Rating {
+  id       String @id @default(cuid())
+  planId   String
+  authorId String
+  rating   Int
+  /// Etiquetas cerradas de `lib/ratings.ts`, no texto libre. Un `String[]` de
+  /// Postgres y no una tabla aparte: son ocho valores de un set que cambia con
+  /// el producto, no una entidad con vida propia, y el `z.enum` del endpoint ya
+  /// es la restriccion que las hace validas. Lo que **no** puede volver a
+  /// aparecer es un `String?` de texto libre: §5.9 decide que `Rating` no
+  /// contiene juicios sobre personas, y eso se sostiene en la forma de la tabla.
+  tags      String[] @default([])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  plan          Plan            @relation(fields: [planId], references: [id], onDelete: Cascade)
+  participacion PlanParticipant @relation(fields: [planId, authorId], references: [planId, userId], onDelete: Restrict)
+  author        User            @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@unique([planId, authorId])
+  @@index([planId])
+  @@index([authorId])
+}
