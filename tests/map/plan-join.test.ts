@@ -200,18 +200,45 @@ describe('los mensajes de un 409 con estado', () => {
   it('cada estado tiene su propio texto', () => {
     // El 409 con `status` no es un error generico: "el organizador no te
     // acepto" y "ya estas confirmado" son cosas distintas para el usuario.
-    expect(MENSAJES_POR_ESTADO.REQUESTED).toContain('Pediste unirte')
-    expect(MENSAJES_POR_ESTADO.ACCEPTED).toContain('confirmado')
-    expect(MENSAJES_POR_ESTADO.DECLINED).toContain('no acepto')
-    expect(MENSAJES_POR_ESTADO.CANCELLED).toContain('dado de baja')
-    expect(MENSAJES_POR_ESTADO.NO_SHOW).toContain('asistencia')
-    expect(MENSAJES_POR_ESTADO.ATTENDED).toContain('estuviste')
+    expect(MENSAJES_POR_ESTADO.REQUESTED.texto).toContain('Pediste unirte')
+    expect(MENSAJES_POR_ESTADO.ACCEPTED.texto).toContain('confirmado')
+    expect(MENSAJES_POR_ESTADO.DECLINED.texto).toContain('no acepto')
+    expect(MENSAJES_POR_ESTADO.CANCELLED.texto).toContain('dado de baja')
+    expect(MENSAJES_POR_ESTADO.NO_SHOW.texto).toContain('asistencia')
+    expect(MENSAJES_POR_ESTADO.ATTENDED.texto).toContain('estuviste')
   })
 
   it('ningun texto promete entrar sin organizacion', () => {
     // Un unico texto que dijera "ya estas adentro" seria el bug de consentimiento.
-    for (const [estado, texto] of Object.entries(MENSAJES_POR_ESTADO)) {
+    for (const [estado, { texto }] of Object.entries(MENSAJES_POR_ESTADO)) {
       expect(texto, estado).not.toMatch(/\bestas adentro\b/)
+    }
+  })
+
+  it('esperar y ser rechazado no se pintan como error', () => {
+    // La audiencia tiene ansiedad social y el rechazo es privado por diseno.
+    // Si un REQUESTED o un DECLINED vuelven en el rojo de un fallo de red, la
+    // interfaz le grita al usuario que rompio algo cuando no rompio nada.
+    for (const estado of ['REQUESTED', 'DECLINED', 'CANCELLED', 'ATTENDED', 'NO_SHOW'] as const) {
+      expect(MENSAJES_POR_ESTADO[estado].tono, estado).toBe('neutro')
+    }
+  })
+
+  it('esperar tampoco se pinta como un exito', () => {
+    // Verde dice "ya estas adentro". Pedir es una espera, no una confirmacion:
+    // el mismo bug de consentimiento que el texto, resuelto en el color.
+    expect(MENSAJES_POR_ESTADO.REQUESTED.tono).not.toBe('ok')
+  })
+
+  it('solo lo que si es un logro queda en ok', () => {
+    expect(MENSAJES_POR_ESTADO.ACCEPTED.tono).toBe('ok')
+  })
+
+  it('ningun estado se muestra con el tono de error', () => {
+    // `error` queda para lo que no se pudo hacer (conexion, 500, 403). Ningun
+    // estado de participacion es eso: son todos hechos, no fallas.
+    for (const [estado, { tono }] of Object.entries(MENSAJES_POR_ESTADO)) {
+      expect(tono, estado).not.toBe('error')
     }
   })
 })

@@ -363,8 +363,12 @@ export function ChatClient({ planId }: { planId: string }) {
          * escribiendo, pero el `maxLength` del navegador recorta en silencio al
          * pegar un texto largo, asi que el contador es la parte que explica por
          * que no entra todo.
+         *
+         * En cero es `neutro` y no `error`: llegaste al limite de caracteres de
+         * un mensaje, no rompiste nada. Se mantiene la misma caja (`.msg`) en
+         * los dos casos para que la caja no cambie de alto al llegar a cero.
          */}
-        <p className={`chat-cuenta ${restantes === 0 ? 'msg error' : 'note'}`} aria-live="polite">
+        <p className={`chat-cuenta ${restantes === 0 ? 'msg neutro' : 'note'}`} aria-live="polite">
           {restantes} caracteres restantes
         </p>
         {errorEnvio ? (

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatPlanMoment } from '@/lib/plan-dates'
+import type { TonoMensaje } from '@/lib/plan-join'
 import {
   describirAlineacion,
   describirReliability,
@@ -39,7 +40,7 @@ export function RequestsClient({ planPedido }: { planPedido?: string }) {
   const [errorSolicitudes, setErrorSolicitudes] = useState<string | null>(null)
   /** userId de la fila en la que se esta clicking, para desactivar solo esa. */
   const [decidiendo, setDecidiendo] = useState<string | null>(null)
-  const [mensaje, setMensaje] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
+  const [mensaje, setMensaje] = useState<{ tipo: TonoMensaje; texto: string } | null>(null)
 
   /**
    * Los planes propios. Se cargan una vez y se vuelven a pedir tras decidir.
@@ -130,8 +131,14 @@ export function RequestsClient({ planPedido }: { planPedido?: string }) {
           body: JSON.stringify({ userId: s.userId, decision }),
         })
         if (res.ok) {
-          const verb = decision === 'ACCEPTED' ? 'aceptaste a' : 'rechazaste a'
-          setMensaje({ tipo: 'ok', texto: `${verb} ${s.name}.` })
+          if (decision === 'ACCEPTED') {
+            setMensaje({ tipo: 'ok', texto: `Aceptaste a ${s.name}.` })
+          } else {
+            // Rechazar no es un logro que se festeje con verde, igual que no
+            // es un error que merece rojo: es una decision privada entre el
+            // organizador y quien pidio. Se confirma y se sigue.
+            setMensaje({ tipo: 'neutro', texto: `No aceptaste la peticion de ${s.name}.` })
+          }
         } else if (res.status === 409) {
           const body = await res.json().catch(() => ({}))
           setMensaje({ tipo: 'error', texto: `No se pudo decidir: ${body.error ?? 'el plan cambio'}` })

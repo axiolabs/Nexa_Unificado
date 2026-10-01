@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { formatPlanMoment } from '@/lib/plan-dates'
 import { CATEGORY_LABELS } from '@/lib/enums'
 import { MENSAJES_POR_ESTADO, decidirUnirse } from '@/lib/plan-join'
+import type { TonoMensaje } from '@/lib/plan-join'
 import { puedeUsarChat } from '@/lib/chat'
 import { planCerrable } from '@/lib/plan-finished'
 import type { PlanDetail } from '@/lib/plans'
@@ -38,7 +39,7 @@ export function PlanDetailClient({ planId }: { planId: string }) {
   const [error, setError] = useState<string | null>(null)
 
   const [uniendo, setUniendo] = useState(false)
-  const [mensaje, setMensaje] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
+  const [mensaje, setMensaje] = useState<{ tipo: TonoMensaje; texto: string } | null>(null)
 
   const cargar = useCallback(async (opciones?: { silencioso?: boolean }) => {
     // Un refetch silencioso para las acciones de cerrar el plan. Un POST de
@@ -111,7 +112,15 @@ export function PlanDetailClient({ planId }: { planId: string }) {
 
       if (res.status === 409 && body.status) {
         // El 409 con estado: se refleja lo que dijo el server, no un texto fijo.
-        setMensaje({ tipo: 'error', texto: MENSAJES_POR_ESTADO[body.status] ?? body.error ?? 'No te pudiste unir' })
+        // El tono tambien viene del server. Pintar esto de rojo seria tratar
+        // "estoy esperando" y "me rechazaron" como si fueran un fallo de la app,
+        // y el rechazo es privado: no puede gritarle al usuario igual que un 500.
+        const porEstado = MENSAJES_POR_ESTADO[body.status]
+        setMensaje(
+          porEstado
+            ? { tipo: porEstado.tono, texto: porEstado.texto }
+            : { tipo: 'error', texto: body.error ?? 'No te pudiste unir' },
+        )
         await cargar()
         return
       }
@@ -321,7 +330,7 @@ export function PlanDetailClient({ planId }: { planId: string }) {
           onPedir: pedirUnirme,
         })}
         {mensaje && (
-          <p className={`msg ${mensaje.tipo === 'ok' ? 'ok' : 'error'}`} role="status">
+          <p className={`msg ${mensaje.tipo}`} role="status">
             {mensaje.texto}
           </p>
         )}

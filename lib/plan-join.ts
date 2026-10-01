@@ -105,23 +105,38 @@ export function decidirUnirse(
 }
 
 /**
- * Que dice un 409 que trae estado.
+ * Que tono lleva un mensaje en pantalla.
+ *
+ * `neutro` existe para lo que NO es un fallo: pedir y esperar, que te hayan
+ * rechazado, haber estado. La audiencia tiene ansiedad social y el rechazo es
+ * privado por diseno, asi que un `DECLINED` pintado con el rojo de un fallo de
+ * redaria al usuario de que rompio algo. Un error de verdad (no se pudo
+ * guardar, se cayo la conexion) sigue siendo el unico caso con rojo.
+ */
+export type TonoMensaje = 'ok' | 'neutro' | 'error'
+
+/**
+ * Que dice un 409 que trae estado, y con que tono se muestra.
  *
  * El 409 con `status` no es un error: es el endpoint diciendo "ya estas en este
  * estado". El texto sale del estado y no al azar, porque "no se pudo unir" y
- * "el organizador no te acepto" son coisas que el usuario tiene que poder
+ * "el organizador no te acepto" son cosas que el usuario tiene que poder
  * distinguir.
  *
- * `Record<string, string>` y no un union estricto a proposito: la clave viene
+ * `Record<string, ...>` y no un union estricto a proposito: la clave viene
  * del servidor, y un estado nuevo tiene que mostrar un texto y no un
  * `undefined` en pantalla. Para estado desconocido, el que llama usa el `error`
  * del body.
  */
-export const MENSAJES_POR_ESTADO: Record<string, string> = {
-  REQUESTED: 'Pediste unirte. El organizador tiene hasta 24 horas para responder.',
-  ACCEPTED: 'Ya estas confirmado.',
-  ATTENDED: 'Ya estuviste en este plan.',
-  DECLINED: 'El organizador no acepto tu peticion.',
-  CANCELLED: 'Te habias dado de baja de este plan.',
-  NO_SHOW: 'El organizador ve el detalle de tu asistencia.',
+export const MENSAJES_POR_ESTADO: Record<string, { texto: string; tono: TonoMensaje }> = {
+  // Pedir no es un error ni un exito: es una espera. Verde ("ya estas") seria
+  // mentir, y rojo seria alarma.
+  REQUESTED: { texto: 'Pediste unirte. El organizador tiene hasta 24 horas para responder.', tono: 'neutro' },
+  ACCEPTED: { texto: 'Ya estas confirmado.', tono: 'ok' },
+  // "Ya estuviste" es un hecho, no un problema.
+  ATTENDED: { texto: 'Ya estuviste en este plan.', tono: 'neutro' },
+  // El rechazo es privado y definitivo. Neutro, nunca rojo.
+  DECLINED: { texto: 'El organizador no acepto tu peticion.', tono: 'neutro' },
+  CANCELLED: { texto: 'Te habias dado de baja de este plan.', tono: 'neutro' },
+  NO_SHOW: { texto: 'El organizador ve el detalle de tu asistencia.', tono: 'neutro' },
 }

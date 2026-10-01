@@ -17,7 +17,7 @@ export default function Home() {
   const [me, setMe] = useState<User | null>(null)
   const [checked, setChecked] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'neutro' | 'error'; text: string } | null>(null)
 
   const refresh = useCallback(async () => {
     const res = await fetch('/api/auth/me', { cache: 'no-store' })
@@ -51,7 +51,14 @@ export default function Home() {
         setMsg({ kind: 'error', text: (data.error ?? `HTTP ${res.status}`) + campos })
         return
       }
-      setMsg({ kind: 'ok', text: `OK ${path}` })
+      // Texto para la persona, no el path del endpoint que respondio. "OK
+      // /api/auth/login" no le dice nada a nadie.
+      setMsg({
+        kind: 'ok',
+        text: path.endsWith('/register')
+          ? 'Cuenta creada. Ya podes entrar.'
+          : 'Sesion iniciada.',
+      })
       await refresh()
     } catch (e) {
       setMsg({ kind: 'error', text: String(e) })
@@ -76,13 +83,20 @@ export default function Home() {
   return (
     <main>
       <h1>Nexa</h1>
-      <p className="lede">Slice A · registro e inicio de sesion con email + contrasena.</p>
+      <p className="lede">Planes con gente nueva.</p>
 
-      <h2>Sesion</h2>
+      {msg && <p className={`msg ${msg.kind}`} role="status">{msg.text}</p>}
+
+      {/*
+        Con sesion no se muestran los formularios. Antes convivia la sesion
+        arriba con los dos formularios y las notas abajo, todo a la vez: era la
+        pagina de pruebas, no la puerta de entrada. Registrarte o entrar ya
+        tienen exito, asi que lo unico que queda por hacer es salir.
+      */}
       {me ? (
         <>
+          <h2>Sesion</h2>
           <dl>
-            <dt>id</dt><dd>{me.id}</dd>
             <dt>email</dt><dd>{me.email}</dd>
             <dt>nombre</dt><dd>{me.name}</dd>
             {me.roles && <><dt>roles</dt><dd>{me.roles.join(', ')}</dd></>}
@@ -92,66 +106,64 @@ export default function Home() {
           </div>
         </>
       ) : (
-        <p className="note">Sin sesion. Registrate o entra.</p>
+        <>
+          <h2>Crear cuenta</h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const f = new FormData(e.currentTarget)
+              void submit('/api/auth/register', {
+                name: String(f.get('name') ?? ''),
+                email: String(f.get('email') ?? ''),
+                password: String(f.get('password') ?? ''),
+              })
+            }}
+          >
+            <label>
+              Nombre
+              <input name="name" required minLength={2} maxLength={80} placeholder="Ana Ruiz" />
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" required placeholder="ana@example.com" />
+            </label>
+            <label>
+              Contrasena (min. {MIN_PASSWORD})
+              <input name="password" type="password" required minLength={MIN_PASSWORD} />
+            </label>
+            <button disabled={busy}>Crear cuenta</button>
+          </form>
+
+          <h2>Iniciar sesion</h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const f = new FormData(e.currentTarget)
+              void submit('/api/auth/login', {
+                email: String(f.get('email') ?? ''),
+                password: String(f.get('password') ?? ''),
+              })
+            }}
+          >
+            <label>
+              Email
+              <input name="email" type="email" required placeholder="ana@example.com" />
+            </label>
+            <label>
+              Contrasena
+              <input name="password" type="password" required />
+            </label>
+            <button disabled={busy}>Entrar</button>
+          </form>
+
+          <h2>Notas</h2>
+          <p className="note">
+            El registro normaliza el email a minusculas antes de escribir, porque el
+            indice unico de Postgres distingue mayusculas. La contrasena no se
+            transforma: ni trim ni minusculas, para no destruir entropia.
+          </p>
+        </>
       )}
-
-      {msg && <p className={`msg ${msg.kind}`} style={{ marginTop: '1.25rem' }}>{msg.text}</p>}
-
-      <h2>Registro</h2>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          const f = new FormData(e.currentTarget)
-          void submit('/api/auth/register', {
-            name: String(f.get('name') ?? ''),
-            email: String(f.get('email') ?? ''),
-            password: String(f.get('password') ?? ''),
-          })
-        }}
-      >
-        <label>
-          Nombre
-          <input name="name" required minLength={2} maxLength={80} placeholder="Ana Ruiz" />
-        </label>
-        <label>
-          Email
-          <input name="email" type="email" required placeholder="ana@example.com" />
-        </label>
-        <label>
-          Contrasena (min. {MIN_PASSWORD})
-          <input name="password" type="password" required minLength={MIN_PASSWORD} />
-        </label>
-        <button disabled={busy}>Crear cuenta</button>
-      </form>
-
-      <h2>Iniciar sesion</h2>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          const f = new FormData(e.currentTarget)
-          void submit('/api/auth/login', {
-            email: String(f.get('email') ?? ''),
-            password: String(f.get('password') ?? ''),
-          })
-        }}
-      >
-        <label>
-          Email
-          <input name="email" type="email" required placeholder="ana@example.com" />
-        </label>
-        <label>
-          Contrasena
-          <input name="password" type="password" required />
-        </label>
-        <button disabled={busy}>Entrar</button>
-      </form>
-
-      <h2>Notas</h2>
-      <p className="note">
-        El registro normaliza el email a minusculas antes de escribir, porque el
-        indice unico de Postgres distingue mayusculas. La contrasena no se
-        transforma: ni trim ni minusculas, para no destruir entropia.
-      </p>
     </main>
   )
 }

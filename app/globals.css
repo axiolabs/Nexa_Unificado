@@ -5,11 +5,24 @@
   --muted: #6b6b76;
   --line: #e2e2e8;
   --accent: #2f5bd7;
-  --danger: #b42318;
-  --ok: #0f7b3d;
+  --danger: #8f4238;
+  --ok: #2f6b4f;
   /* Superficies Elevated, para burbujas de chat y tarjetas. */
   --raised: #f4f4f7;
   --raised-accent: #e8eefc;
+  /*
+   * Tono neutro: lo que se informa sin ser un fallo.
+   *
+   * La audiencia tiene ansiedad social y el rechazo de una solicitud es
+   * privado por diseno. Pedir y esperar, que te rechacen, o que ya hayas
+   * estado NO van en rojo: el rojo queda reservado para lo que de verdad no
+   * pudo hacerse (no se guardo, se cayo la conexion), y aun ahi es un rojo
+   * apagado, no de alarma, para que no grite.
+   */
+  --neutro: #4a5568;
+  --neutro-bg: #f2f3f6;
+  --ok-bg: #eef4f0;
+  --danger-bg: #f8efee;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,10 +32,14 @@
     --muted: #9a9aa6;
     --line: #2a2a33;
     --accent: #7ea1ff;
-    --danger: #ff8a80;
-    --ok: #5fd39a;
+    --danger: #d98c84;
+    --ok: #86c4a2;
     --raised: #1c1c24;
     --raised-accent: #1e2740;
+    --neutro: #a9b1bd;
+    --neutro-bg: #1b1d24;
+    --ok-bg: #16211b;
+    --danger-bg: #241a19;
   }
 }
 
@@ -123,14 +140,33 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+/*
+ * Tres tonos, y solo uno es rojo.
+ *
+ * `.neutro` cubre lo que se informa sin ser un fallo: una solicitud esperando,
+ * un rechazo (que es privado y no debe gritarle al usuario como si fuera una
+ * falla), un plan en el que ya estuviste. Se lee como una nota, no como un
+ * semaforo.
+ *
+ * `.error` queda para lo que no se pudo hacer. Aun asi es un rojo apagado: el
+ * producto promete calma, y esa promesa se cumple en el color.
+ */
 .msg.error {
+  background: var(--danger-bg);
   border-color: var(--danger);
   color: var(--danger);
 }
 
 .msg.ok {
+  background: var(--ok-bg);
   border-color: var(--ok);
   color: var(--ok);
+}
+
+.msg.neutro {
+  background: var(--neutro-bg);
+  border-color: var(--line);
+  color: var(--neutro);
 }
 
 dl {
