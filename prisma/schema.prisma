@@ -64,6 +64,32 @@ enum ParticipationStatus {
   NO_SHOW
 }
 
+enum ReportTarget {
+  PLACE
+  PLAN
+  USER
+  MESSAGE
+}
+
+enum ReportReason {
+  CLOSED
+  WRONG_INFO
+  UNSAFE
+  NO_SHOW_RISK
+  MISLEADING
+  HARASSMENT
+  SPAM
+  IMPERSONATION
+  OFF_TOPIC
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
 model User {
   id              String    @id @default(cuid())
   email           String    @unique
@@ -88,6 +114,9 @@ model User {
   ratings            Rating[]
   personalityResults PersonalityResult[]
   deletedMessages    Message[]            @relation("MessageDeleter")
+  reportsMade        ModerationReport[]   @relation("ReportReporter")
+  reportsResolved    ModerationReport[]   @relation("ReportResolver")
+  reportsAgainst     ModerationReport[]   @relation("ReportTargetUser")
 
   @@index([planTier])
   @@index([emailVerifiedAt])
@@ -150,9 +179,10 @@ model Place {
   updatedAt          DateTime                @updatedAt
   deletedAt          DateTime?
 
-  owner  User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-  traits PlaceTrait[]
-  plans  Plan[]
+  owner   User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  traits  PlaceTrait[]
+  plans   Plan[]
+  reports ModerationReport[]
 
   @@index([verificationStatus, category, priceLevel])
   @@index([city])
@@ -266,11 +296,12 @@ model Plan {
   updatedAt     DateTime   @updatedAt
   deletedAt     DateTime?
 
-  place        Place             @relation(fields: [placeId], references: [id], onDelete: Restrict)
-  creator      User              @relation("PlanCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  place        Place              @relation(fields: [placeId], references: [id], onDelete: Restrict)
+  creator      User               @relation("PlanCreator", fields: [creatorId], references: [id], onDelete: Restrict)
   participants PlanParticipant[]
   messages     Message[]
   ratings      Rating[]
+  reports      ModerationReport[]
 
   @@index([placeId, startsAt])
   @@index([creatorId, createdAt])
@@ -308,18 +339,19 @@ model Message {
   deletedAt   DateTime?
   deletedById String?
 
-  plan          Plan            @relation(fields: [planId], references: [id], onDelete: Cascade)
-  participacion PlanParticipant @relation(fields: [planId, authorId], references: [planId, userId], onDelete: Cascade)
-  deletedBy     User?           @relation("MessageDeleter", fields: [deletedById], references: [id], onDelete: SetNull)
+  plan          Plan               @relation(fields: [planId], references: [id], onDelete: Cascade)
+  participacion PlanParticipant    @relation(fields: [planId, authorId], references: [planId, userId], onDelete: Cascade)
+  deletedBy     User?              @relation("MessageDeleter", fields: [deletedById], references: [id], onDelete: SetNull)
+  reports       ModerationReport[]
 
   @@index([planId, createdAt])
 }
 
 model Rating {
-  id       String @id @default(cuid())
-  planId   String
-  authorId String
-  rating   Int
+  id        String   @id @default(cuid())
+  planId    String
+  authorId  String
+  rating    Int
   /// Etiquetas cerradas de `lib/ratings.ts`, no texto libre. Un `String[]` de
   /// Postgres y no una tabla aparte: son ocho valores de un set que cambia con
   /// el producto, no una entidad con vida propia, y el `z.enum` del endpoint ya
@@ -327,8 +359,8 @@ model Rating {
   /// aparecer es un `String?` de texto libre: §5.9 decide que `Rating` no
   /// contiene juicios sobre personas, y eso se sostiene en la forma de la tabla.
   tags      String[] @default([])
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   plan          Plan            @relation(fields: [planId], references: [id], onDelete: Cascade)
   participacion PlanParticipant @relation(fields: [planId, authorId], references: [planId, userId], onDelete: Restrict)
@@ -337,4 +369,71 @@ model Rating {
   @@unique([planId, authorId])
   @@index([planId])
   @@index([authorId])
+}
+
+/// Una denuncia. La cola de la curaduria, no un motor de castigo.
+///
+/// Esto REGISTRA un problema, no lo resuelve: no suspende a nadie, no cancela
+/// planes ni saca lugares de circulacion. La accion la decide una persona del
+/// equipo con las herramientas que ya existen (`Place.verificationStatus`,
+/// `User.isActive`/`suspendedAt`, `PlanParticipant.status`), y esta tabla solo
+/// le dice que hay algo para mirar.
+///
+/// Que sea una cola y no un automatismo no es una decision de arquitectura: es
+/// §12 de `docs/decisiones-auth.md`, que ya decidio "intervencion humana, no
+/// cancelacion automatica" porque un plan es una promesa con hora y lugar, y
+/// sin canal de notificacion un cancel silencioso deja a gente que se presento
+/// apuntando a algo que ya no existe.
+///
+/// Los cuatro `*Id` son nullable y hay EXACTAMENTE uno informado. No se usa un
+/// `targetId` polimorfico suelto: eso no puede tener foreign key, o sea que la
+/// base no impediria un reporte a un lugar que no existe. Con las columnas
+/// separadas, `onDelete: SetNull` y el CHECK de la migracion, el reporte sobrevive
+/// al borrado del objetivo (que es lo que tiene que pasar: el reporte es la
+/// evidencia) pero nunca apunta a algo inexistente.
+///
+/// `target` esta aunque sea derivable de cual FK esta informado, por dos razones:
+/// la cola agrupa por tipo sin un `CASE`, y los indices unicos parciales de la
+/// migracion se apoyan en el.
+model ModerationReport {
+  id         String       @id @default(cuid())
+  reporterId String
+  target     ReportTarget
+  reason     ReportReason
+  /// Texto libre opcional, y opcional a proposito: forzar un comentario hace que
+  /// la gente no denuncie ("no quiero escribir un texto"), y el motivo ya es un
+  /// set cerrado que el endpoint valida.
+  detail     String?
+
+  status         ReportStatus @default(OPEN)
+  /// Quien lo cerro y cuando. Es auditoria, no decoracion: sin esto no se puede
+  /// saber si la cola se esta emptying o si nadie la esta tocando.
+  resolvedById   String?
+  resolvedAt     DateTime?
+  /// Por que se cerro asi. Distingue "arreglamos esto" de "revisamos y esta
+  /// bien": sin esa distincion no hay forma de saber cuantos reportes eran
+  /// falsos, que es el numero que avisa si el producto esta generando ruido.
+  resolutionNote String?
+
+  placeId   String?
+  planId    String?
+  userId    String?
+  messageId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reporter   User     @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolvedBy User?    @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  place      Place?   @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  plan       Plan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
+  user       User?    @relation("ReportTargetUser", fields: [userId], references: [id], onDelete: SetNull)
+  message    Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([placeId])
+  @@index([planId])
+  @@index([userId])
+  @@index([messageId])
+  @@index([reporterId])
 }
