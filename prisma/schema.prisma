@@ -407,12 +407,21 @@ model ModerationReport {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  reporter   User     @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  // `Restrict` y no `Cascade` en `reporterId`: borrar la cuenta de alguien se
+  // lleva sus reportes, y un rastro de auditoria que se borra solo cuando borra
+  // al denunciante no es un rastro de auditoria. Medido: 3 reportes -> 0.
+  reporter   User     @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  // `resolvedById` si puede quedar en NULL: perder "quien cerro esto" es
+  // tolerable, perder el reporte no.
   resolvedBy User?    @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
-  place      Place?   @relation(fields: [placeId], references: [id], onDelete: SetNull)
-  plan       Plan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
-  user       User?    @relation("ReportTargetUser", fields: [userId], references: [id], onDelete: SetNull)
-  message    Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  // `Restrict` en las cuatro de objetivo, y no `SetNull`: `SET NULL` deja la
+  // fila con cero objetivos informed y choca con el CHECK de "exactamente uno",
+  // asi que borrar lo reportado fallaba. El borrado real de la app es el soft
+  // delete por `deletedAt`; este `Restrict` es el freno del camino destructivo.
+  place      Place?   @relation(fields: [placeId], references: [id], onDelete: Restrict)
+  plan       Plan?    @relation(fields: [planId], references: [id], onDelete: Restrict)
+  user       User?    @relation("ReportTargetUser", fields: [userId], references: [id], onDelete: Restrict)
+  message    Message? @relation(fields: [messageId], references: [id], onDelete: Restrict)
 
   @@index([status, createdAt])
   @@index([placeId])
