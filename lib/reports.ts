@@ -89,9 +89,9 @@ export const STATUS_LABELS: Record<ReportStatus, string> = {
  *
  * Las reglas, y por que estan en este orden:
  *
- * - Se necesita sesion. Una anonymously no se puede: sin `reporterId` el
- *   `ON DELETE CASCADE` de `User` no tiene de que borrar y el reporte queda
- *   huerfano sin autor conocido.
+ * - Se necesita sesion. Sin `reporterId` el reporte queda sin autor conocido, y
+ *   la fila ni se puede borrar despues: la FK es `Restrict`, no `Cascade`, para
+ *   que la evidencia no se vaya con la cuenta del denunciante.
  * - No uno mismo. Denunciarse a si mismo no es un error de la persona, es ruido
  *   que el equipo tiene que leer. Para `PLAN` y `MESSAGE` esto se extiende al
  *   organizador y al autor respectivamente, no solo a la propia cuenta: es el

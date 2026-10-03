@@ -372,3 +372,94 @@ export const attendanceSchema = z
   })
   .strict()
 
+/**
+ * Los conjuntos cerrados de reportes, duplicados de los enums de Prisma.
+ *
+ * Mismo criterio que `PLACE_CATEGORIES`: `z.enum` sobre una lista que uno escribio
+ * a mano castea el input a un enum real y no deja que llegue basura a Postgres,
+ * y el `.default()`/`z.enum` es lo que evita un 500 por un valor inventado. La
+ * alternativa, castear sin validar, produce un error de Postgres que no se puede
+ * traducir a un mensaje de pantalla.
+ *
+ * Lo que NO se re-deriva aca es `ReportReason` por objetivo, que vive en
+ * `lib/reports.ts` como `MOTIVOS_POR_OBJETIVO`. Esa tabla es logica de negocio --
+ * "no se presento" no es un motivo de lugar -- y `motivoValido` la consulta. Si
+ * el schema la aceptara entera, el endpoint tendria que volver a chequearla, y
+ * quedarian dos reglas del mismo predicado en dos lugares.
+ */
+
+/** Los cuatro objetivos que se pueden denunciar. */
+const REPORT_TARGETS = ['PLACE', 'PLAN', 'USER', 'MESSAGE'] as const
+
+/** Los diez motivos del enum. El subconjunto por objetivo lo decide `reports.ts`. */
+const REPORT_REASONS = [
+  'CLOSED',
+  'WRONG_INFO',
+  'UNSAFE',
+  'NO_SHOW_RISK',
+  'MISLEADING',
+  'HARASSMENT',
+  'SPAM',
+  'IMPERSONATION',
+  'OFF_TOPIC',
+  'OTHER',
+] as const
+
+/**
+ * El cuerpo de una denuncia.
+ *
+ * **El id del objetivo va como `targetId`, no como `placeId`/`planId`/...**
+ * cuatro campos opcionales. El motivo es que la base exige exactamente una FK
+ * informada (`ModerationReport_exactamente_un_objetivo`), asi que un payload con
+ * cuatro opcionales puede describir tres estados invalidos: ninguno, dos, o uno
+ * que no corresponde al `target`. Con un solo `targetId` + `target` esos tres
+ * casos no se pueden escribir, y la columna de la FK la elige el endpoint con un
+ * `switch` que es el unico lugar donde se decide eso.
+ *
+ * `.strict()`: mandar `placeId` a mano tiene que ser un 400, no un campo
+ * ignorado en silencio. Si el servidor acepta una forma y descarta la otra, la
+ * UI da la sensacion de que el destino elegido es el que se guardo.
+ *
+ * `detail` es opcional y sin tope de vacio: `motivoValido` + `puedeReportar`
+ * deciden si el motivo pedido exige texto. Acotarlo a 2000 es lo que evita que un
+ * POST con un cuerpo de 10 MB se convierta en un reporte de 10 MB en la cola.
+ */
+export const reportSchema = z
+  .object({
+    target: z.enum(REPORT_TARGETS, { error: 'Ese tipo de denuncia no existe' }),
+    targetId: z.string({ error: 'Falta el objetivo de la denuncia' }).min(1).max(64),
+    reason: z.enum(REPORT_REASONS, { error: 'Ese motivo no existe' }),
+    // `.optional()` y no `.default('')`: el endpoint tiene que poder distinguir
+    // "no mande detalle" de "mande detalle vacio", porque `OTHER` exige texto y
+    // los otros motivos no. Un `''` de relleno convertsiria el segundo en el
+    // primero.
+    detail: z.string().trim().max(2000, 'El detalle es demasiado largo').optional(),
+  })
+  .strict()
+
+export type ReportInput = z.infer<typeof reportSchema>
+
+/**
+ * Cerrar un reporte de la cola.
+ *
+ * `OPEN` NO esta: volver a abrir un reporte ya cerrado no es una operacion que el
+ * producto ofrezca, y aceptarla dejaria filas que cambian de estado sin que nadie
+ * las mire, que es exactamente lo que `resolvedById` y `resolvedAt` existen para
+ * evitar. Si aparece el caso, se decide el modelo, no se afloja el enum.
+ *
+ * `note` es opcional, pero el endpoint lo pide cuando el cierre es `DISMISSED`:
+ * "estaba bien" es un juicio sobre algo que alguien|reporto, y un juicio sin
+ * motivo escrito no deja aprender nada ni sirve para contar cuantos reportes eran
+ * falsos. El numero de falsos es el que avisa si el producto genera ruido.
+ */
+export const reportResolutionSchema = z
+  .object({
+    status: z.enum(['RESOLVED', 'DISMISSED'], {
+      error: 'El cierre debe ser RESOLVED o DISMISSED',
+    }),
+    note: z.string().trim().max(500, 'La nota es demasiado larga').optional(),
+  })
+  .strict()
+
+export type ReportResolutionInput = z.infer<typeof reportResolutionSchema>
+
