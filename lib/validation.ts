@@ -183,11 +183,11 @@ export function parseBbox(
  * estetica: el explorador importaba estas listas de un solo lugar y por eso
  * jamas vio que las suyas no cuadraran. Ver el comentario de `lib/enums.ts`.
  */
-export { PLACE_CATEGORIES, PRICE_LEVELS, CATEGORY_LABELS, PRICE_LABELS } from './enums'
+export { PLACE_CATEGORIES, CATEGORY_LABELS } from './enums'
 // El `export ... from` de arriba NO deja los nombres en el ambito local, asi que
 // los type guards de abajo necesitan su propio import. Sin esto compila el
 // re-export y revienta en la firma del guard.
-import { PLACE_CATEGORIES, PRICE_LEVELS } from './enums'
+import { PLACE_CATEGORIES } from './enums'
 
 /**
  * Type guards sobre las listas cerradas.
@@ -199,11 +199,6 @@ import { PLACE_CATEGORIES, PRICE_LEVELS } from './enums'
 export function isPlaceCategory(v: string): v is (typeof PLACE_CATEGORIES)[number] {
   return (PLACE_CATEGORIES as readonly string[]).includes(v)
 }
-
-export function isPriceLevel(v: string): v is (typeof PRICE_LEVELS)[number] {
-  return (PRICE_LEVELS as readonly string[]).includes(v)
-}
-
 
 /**
  * Crear un plan.

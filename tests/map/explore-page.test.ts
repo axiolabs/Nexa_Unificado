@@ -108,11 +108,13 @@ describe('GET /explore', () => {
     expect(res.text).toContain('map-skeleton')
   })
 
-  it('ofrece los filtros de categoria y precio', async () => {
+  it('ofrece el filtro de categoria, y no el de precio', async () => {
     const res = await new Client().get('/explore')
     expect(res.text).toContain('Categoria')
-    expect(res.text).toContain('Precio')
     expect(res.text).toContain('Cafe')
+    // Nexa es gratis: no hay niveles de precio. Este assert es el que impide que
+    // el filtro vuelva por la puerta de atras cuando alguien agrega el select.
+    expect(res.text).not.toContain('Precio')
   })
 
   it('el HTML no filtra datos de terceros', async () => {

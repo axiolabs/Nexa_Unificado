@@ -3,11 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { formatPlanMoment, nextQuarterHour, toApiDate, toLocalInputValue } from '@/lib/plan-dates'
-import { PLACE_CATEGORIES, PRICE_LABELS, PRICE_LEVELS } from '@/lib/enums'
-// Importados, no re-declarados: una copia local del union compila igual y queda
-// vieja en silencio, que es el mismo modo de falla que la lista de precios que
-// motivo `lib/enums.ts`.
-import type { PlaceCategoryValue, PlacePriceValue } from '@/lib/enums'
+import { PLACE_CATEGORIES } from '@/lib/enums'
+// Importado, no re-declarado: una copia local del union compila igual y queda
+// vieja en silencio, que es el mismo modo de falla que motivo `lib/enums.ts`.
+import type { PlaceCategoryValue } from '@/lib/enums'
 
 /**
  * Formulario de creacion de plan.
@@ -36,7 +35,7 @@ import type { PlaceCategoryValue, PlacePriceValue } from '@/lib/enums'
  *    pantalla es indistinguible de un plan que no se creo, y el mapa no lo
  *    muestra si el lugar esta fuera de la caja que se esta mirando.
  *
- * 5. `PlaceCategoryValue` y `PlacePriceValue` se IMPORTAN de `lib/enums`. Acero
+ * 5. `PlaceCategoryValue` se IMPORTA de `lib/enums`. Acero
  *    estaba la misma union escrita a mano, y el comentario de al lado que dice
  *    "los uniones salen de lib/enums" era falso por la copia misma.
  */
@@ -46,7 +45,6 @@ type PlaceHit = {
   name: string
   description: string | null
   category: PlaceCategoryValue
-  priceLevel: PlacePriceValue
   latitude: number
   longitude: number
   openPlanCount: number
@@ -54,8 +52,8 @@ type PlaceHit = {
 
 /**
  * `PlaceHit` replica EXACTAMENTE lo que devuelve el endpoint, y a proposito
- *includes el `priceLevel` y el `openPlanCount`, que son los dos campos que
- * distinguen dos lugares con el mismo nombre.
+ * incluye el `openPlanCount`, que es el campo que distingue dos lugares con el
+ * mismo nombre y ademas le dice al host si ese lugar ya tiene planes.
  *
  * `address` y `city` NO aparecen, aunque existan en el modelo: no estan en el
  * `select` de `PLACE_SELECT`, que es compartido con el endpoint publico.
@@ -89,12 +87,12 @@ const LIMITE_VISIBLE = 20
  *
  * Necesita desambiguar, no decorar: la busqueda es por subcadena del nombre, asi
  * que todos los resultados se parecen entre si. La categoria sola no alcanza
- * cuando hay dos "cafe" del mismo barrio, asi que suma el precio y cuantos
- * planes abiertos tiene: tres datos que el host ya tiene en pantalla y que
- * contestan "¿este o el otro?" sin abrir otra pagina.
+ * cuando hay dos "cafe" del mismo barrio, asi que suma cuantos planes abiertos
+ * tiene: datos que el host ya tiene en pantalla y que contestan "¿este o el
+ * otro?" sin abrir otra pagina.
  */
 function describePlace(p: PlaceHit): string {
-  const partes = [p.category.toLowerCase(), PRICE_LABELS[p.priceLevel] ?? p.priceLevel]
+  const partes = [p.category.toLowerCase()]
   if (p.openPlanCount > 0) {
     partes.push(
       `${p.openPlanCount} ${p.openPlanCount === 1 ? 'plan abierto' : 'planes abiertos'}`,

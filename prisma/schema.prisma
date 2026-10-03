@@ -14,11 +14,6 @@ enum UserRole {
   ADMIN
 }
 
-enum PlanTier {
-  FREE
-  PREMIUM
-}
-
 enum PlaceCategory {
   CAFE
   RESTAURANT
@@ -29,13 +24,6 @@ enum PlaceCategory {
   BAR
   LIBRARY
   OTHER
-}
-
-enum PriceLevel {
-  FREE
-  LOW
-  MEDIUM
-  HIGH
 }
 
 enum PlaceVerificationStatus {
@@ -97,8 +85,6 @@ model User {
   passwordHash    String?
   name            String
   avatarUrl       String?
-  planTier        PlanTier  @default(FREE)
-  premiumUntil    DateTime?
   isActive        Boolean   @default(true)
   suspendedAt     DateTime?
   suspendedReason String?
@@ -118,7 +104,6 @@ model User {
   reportsResolved    ModerationReport[]   @relation("ReportResolver")
   reportsAgainst     ModerationReport[]   @relation("ReportTargetUser")
 
-  @@index([planTier])
   @@index([emailVerifiedAt])
 }
 
@@ -164,7 +149,6 @@ model Place {
   name               String
   description        String?
   category           PlaceCategory
-  priceLevel         PriceLevel
   address            String?
   city               String?
   latitude           Decimal                 @db.Decimal(9, 6)
@@ -179,12 +163,12 @@ model Place {
   updatedAt          DateTime                @updatedAt
   deletedAt          DateTime?
 
-  owner   User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-  traits  PlaceTrait[]
-  plans   Plan[]
+  owner  User?       @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  traits PlaceTrait[]
+  plans  Plan[]
   reports ModerationReport[]
 
-  @@index([verificationStatus, category, priceLevel])
+  @@index([verificationStatus, category])
   @@index([city])
   @@index([latitude, longitude])
   @@index([ownerId])

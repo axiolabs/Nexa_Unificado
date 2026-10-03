@@ -74,15 +74,8 @@ const MUTANTS = [
     id: 'Q10',
     name: 'la busqueda ignora el filtro de categoria',
     file: PLACES,
-    from: '    ...categoryFilter(filters.category),\n    ...priceFilter(filters.priceLevel),\n    name:',
-    to: '    ...priceFilter(filters.priceLevel),\n    name:',
-  },
-  {
-    id: 'Q11',
-    name: 'la busqueda ignora el filtro de precio',
-    file: PLACES,
-    from: '    ...categoryFilter(filters.category),\n    ...priceFilter(filters.priceLevel),\n    name:',
-    to: '    ...categoryFilter(filters.category),\n    name:',
+    from: '    ...categoryFilter(filters.category),\n    name:',
+    to: '    name:',
   },
   {
     id: 'Q12',

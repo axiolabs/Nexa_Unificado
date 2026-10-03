@@ -4,7 +4,7 @@
  * Sin imports de Next: este modulo lo usan tanto la API como los tests.
  */
 import { getPrisma } from './db'
-import type { PlaceCategory, PlaceVerificationStatus, PriceLevel, Prisma } from '@prisma/client'
+import type { PlaceCategory, PlaceVerificationStatus, Prisma } from '@prisma/client'
 import type { Bbox } from './validation'
 
 /**
@@ -32,7 +32,6 @@ export type PlaceFeature = {
   name: string
   description: string | null
   category: string
-  priceLevel: string
   latitude: number
   longitude: number
   openPlanCount: number
@@ -51,14 +50,13 @@ export type PlaceFeature = {
  */
 export async function findPlacesInBbox(
   bbox: Bbox,
-  filters: { category?: string; priceLevel?: string } = {},
+  filters: { category?: string } = {},
   opts: { isCurator?: boolean } = {},
 ): Promise<PlaceFeature[]> {
   const rows = await getPrisma().place.findMany({
     where: {
       ...visibleWhere(opts.isCurator ?? false),
       ...categoryFilter(filters.category),
-      ...priceFilter(filters.priceLevel),
       // Prisma traduce esto a un rango sobre el indice `[latitude, longitude]`,
       // con `latitude` como columna leader: es la que se acota de forma mas
       // selectiva en la mayoria de los movimientos de mapa.
@@ -92,7 +90,6 @@ const PLACE_SELECT = {
   name: true,
   description: true,
   category: true,
-  priceLevel: true,
   latitude: true,
   longitude: true,
   _count: { select: { plans: { where: openPlanFilter() } } },
@@ -110,7 +107,6 @@ function toFeature(p: {
   name: string
   description: string | null
   category: string
-  priceLevel: string
   latitude: unknown
   longitude: unknown
   _count: { plans: number }
@@ -120,7 +116,6 @@ function toFeature(p: {
     name: p.name,
     description: p.description,
     category: p.category,
-    priceLevel: p.priceLevel,
     latitude: Number(p.latitude),
     longitude: Number(p.longitude),
     openPlanCount: p._count.plans,
@@ -213,10 +208,6 @@ function categoryFilter(category?: string) {
   return category ? { category: category as PlaceCategory } : {}
 }
 
-function priceFilter(priceLevel?: string) {
-  return priceLevel ? { priceLevel: priceLevel as PriceLevel } : {}
-}
-
 /**
  * Longitude a traves del antimeridiano.
  *
@@ -304,7 +295,7 @@ export type PlaceSearchResult = {
 
 export async function searchPlaces(
   q: string,
-  filters: { category?: string; priceLevel?: string } = {},
+  filters: { category?: string } = {},
   opts: { isCurator?: boolean; limit?: number; planableOnly?: boolean } = {},
 ): Promise<PlaceSearchResult> {
   const limit = opts.limit ?? PLACE_SEARCH_LIMIT
@@ -316,7 +307,6 @@ export async function searchPlaces(
   const where = {
     ...(opts.planableOnly ? planablePlaceWhere() : visibleWhere(opts.isCurator ?? false)),
     ...categoryFilter(filters.category),
-    ...priceFilter(filters.priceLevel),
     name: { contains: q, mode: 'insensitive' as const },
   }
 

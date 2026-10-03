@@ -125,7 +125,6 @@ const place = await prisma.place.create({
   data: {
     name: NOMBRE_LUGAR,
     category: 'CAFE',
-    priceLevel: 'LOW',
     latitude: -34.6037,
     longitude: -58.3816,
     timezone: 'America/Argentina/Buenos_Aires',
@@ -136,7 +135,6 @@ const pendiente = await prisma.place.create({
   data: {
     name: NOMBRE_PENDIENTE,
     category: 'BAR',
-    priceLevel: 'MEDIUM',
     latitude: -34.604,
     longitude: -58.382,
     timezone: 'America/Argentina/Buenos_Aires',

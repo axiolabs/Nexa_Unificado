@@ -774,6 +774,9 @@ las dos listas que comparaba estaban bien. **La copia que mentia era una
 tercera, en el cliente, y el test no la miraba.** Un test de sincronia solo
 mira las copias que conoce.
 
+(Despues: `PriceLevel` y su filtro se eliminaron por completo, porque Nexa es
+gratis. Los valores de arriba son el registro del bug, no una lista vigente.)
+
 La correccion no fue actualizar los cuatro valores, fue borrar la copia: las
 listas viven en `lib/enums.ts`, `lib/validation.ts` las re-exporta, y el
 explorador las importa. Un filtro de precio desincronizado ya no se puede
@@ -1052,13 +1055,27 @@ avisa de nada. El comentario describia la propiedad que faltaba.
 Verificado por mutacion: sacar `isFull` de la respuesta rompe `tsc` con
 `TS2322 ... not assignable to type 'PlanDetail'`.
 
-Los unions de `PlaceCategoryValue` y `PlacePriceValue` se exportan desde
-`lib/enums.ts` por el mismo motivo, y con el mismo argumento de §13.4: un
-`category: string` hace que `CATEGORY_LABELS[categoria]` compile y devuelva
-`undefined` en pantalla. Al revisarlos aparecieron **dos copias locales** de esos
-unions, y una de ellas estaba debajo de un comentario que decia que los uniones
-venian de `lib/enums`. Las dos se importan ahora. Un comentario que afirma una
-propiedad de las lineas de al lado vale exactamente lo que valen esas lineas.
+El union de `PlaceCategoryValue` se exporta desde `lib/enums.ts` por el mismo
+motivo, y con el mismo argumento de §13.4: un `category: string` hace que
+`CATEGORY_LABELS[categoria]` compile y devuelva `undefined` en pantalla. Al
+revisarlo aparecieron **dos copias locales** de ese union, y una de ellas estaba
+debajo de un comentario que decia que los uniones venian de `lib/enums`. Las dos
+se importan ahora. Un comentario que afirma una propiedad de las lineas de al
+lado vale exactamente lo que valen esas lineas.
+
+`PlacePriceValue` y el filtro de precio quedaron eliminados junto con el enum
+`PriceLevel` (Nexa es gratis). Lo que ahora se verifica es lo contrario de lo que
+se verificaba antes: que un `?priceLevel=` de un link viejo se **ignore** en vez
+de dar 400, para que un cliente viejo desplegado no convierta el mapa en una
+pantalla de error.
+
+Estos tests de bundle dependen de la **forma** del build, no solo de que compile.
+Con Turbopack los chunks de pagina se enlazan desde el HTML; con Webpack se piden
+por un mapa de ids del runtime, y los archivos quedan en
+`.next/static/chunks/app/<ruta>/page-<hash>.js`. Por eso `build` esta pineado a
+`--webpack` y `tests/helpers/chunks.ts` lee esa ruta en disco: si el bundler
+vuelve a Turbopack, los tests tienen que cambiar de estrategia, no relajar las
+aserciones.
 
 #### Unirse es desde el detalle, y por que
 

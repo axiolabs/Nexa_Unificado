@@ -5,12 +5,11 @@
  * Client Component que importa de ahi se trae zod entero al bundle del cliente
  * para leer dos arrays de strings. Ademas, estas listas son la referencia que el
  * cliente usa para armar sus filtros, y ya paso lo que pasa cuando cada uno
- * escribe su propia copia: el explorador tenia hardcodeados `CHEAP`,
- * `MODERATE`, `EXPENSIVE` y `LUXURY`, que **ninguno** existe en el enum
- * (`FREE`, `LOW`, `MEDIUM`, `HIGH`). O sea, elegir un precio en el mapa mandaba
- * un `?priceLevel=CHEAP` y recibia un 400. El filtro de precio estaba roto y no
- * habia test que lo cubriera, porque el test de sincronia compara estas listas
- * contra Prisma: ambas estaban bien, la copia del cliente era la que mentia.
+ * escribe su propia copia: el explorador se habia inventado sus propios valores
+ * de precio y mandaba en la query strings que **ninguna** existia en el enum,
+ * o sea, elegir un filtro en el mapa devolvia un 400. No habia test que lo
+ * cubriera, porque el test de sincronia compara estas listas contra Prisma: ambas
+ * estaban bien, la copia del cliente era la que mentia.
  *
  * Importar desde aca hace que la desincronizacion sea imposible por
  * construccion, que es mas barato que un test que la detecte.
@@ -28,8 +27,6 @@ export const PLACE_CATEGORIES = [
   'OTHER',
 ] as const
 
-export const PRICE_LEVELS = ['FREE', 'LOW', 'MEDIUM', 'HIGH'] as const
-
 /**
  * Los unions, exportados para que el cliente los use en vez de `string`.
  *
@@ -40,7 +37,6 @@ export const PRICE_LEVELS = ['FREE', 'LOW', 'MEDIUM', 'HIGH'] as const
  * en el compilado y no en el texto que ve el usuario.
  */
 export type PlaceCategoryValue = (typeof PLACE_CATEGORIES)[number]
-export type PlacePriceValue = (typeof PRICE_LEVELS)[number]
 
 /** Etiquetas para mostrar. La clave es el valor del enum, nunca otra. */
 export const CATEGORY_LABELS: Record<(typeof PLACE_CATEGORIES)[number], string> = {
@@ -53,11 +49,4 @@ export const CATEGORY_LABELS: Record<(typeof PLACE_CATEGORIES)[number], string> 
   BAR: 'Bar',
   LIBRARY: 'Libreria',
   OTHER: 'Otro',
-}
-
-export const PRICE_LABELS: Record<(typeof PRICE_LEVELS)[number], string> = {
-  FREE: 'Gratis',
-  LOW: '$',
-  MEDIUM: '$$',
-  HIGH: '$$$',
 }

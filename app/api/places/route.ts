@@ -4,15 +4,13 @@ import { fail } from '@/lib/http'
 import { findPlacesInBbox, searchPlaces } from '@/lib/places'
 import {
   PLACE_CATEGORIES,
-  PRICE_LEVELS,
   isPlaceCategory,
-  isPriceLevel,
   parseBbox,
 } from '@/lib/validation'
 
 /**
- * GET /api/places?bbox=minLng,minLat,maxLng,maxLat&category=&priceLevel=
- * GET /api/places?q=texto&category=&priceLevel=
+ * GET /api/places?bbox=minLng,minLat,maxLng,maxLat&category=
+ * GET /api/places?q=texto&category=
  *
  * PUBLICO a proposito: el mapa es la superficie de adquisicion. Un visitante
  * sin cuenta ve los mismos lugares que un usuario, y por eso la respuesta no
@@ -56,7 +54,6 @@ export async function GET(req: Request) {
   }
 
   const category = url.searchParams.get('category') ?? undefined
-  const priceLevel = url.searchParams.get('priceLevel') ?? undefined
 
   // La query string la controla cualquiera y estos valores llegan a la consulta.
   // Contra la lista cerrada, no con un cast a ciegas: sin esto un
@@ -64,9 +61,6 @@ export async function GET(req: Request) {
   // mensaje que dice que valores si valen.
   if (category !== undefined && !isPlaceCategory(category)) {
     return fail(400, `category invalido. Valores: ${PLACE_CATEGORIES.join(', ')}`)
-  }
-  if (priceLevel !== undefined && !isPriceLevel(priceLevel)) {
-    return fail(400, `priceLevel invalido. Valores: ${PRICE_LEVELS.join(', ')}`)
   }
 
   const viewer = await getViewer()
@@ -85,7 +79,7 @@ export async function GET(req: Request) {
     if (q.length < 2) {
       return fail(400, 'La busqueda necesita al menos 2 caracteres')
     }
-    const result = await searchPlaces(q, { category, priceLevel }, { isCurator: cur })
+    const result = await searchPlaces(q, { category }, { isCurator: cur })
     // `total` y `truncated` viajan en la respuesta a proposito: el selector de
     // lugares tiene que poder decir "20 de 57". Un tope invisible convierte
     // "el lugar que busco no aparece" en un bug sin diagnostico posible.
@@ -100,7 +94,7 @@ export async function GET(req: Request) {
   const parsed = parseBbox(rawBbox)
   if (!parsed.ok) return fail(400, parsed.error)
 
-  const places = await findPlacesInBbox(parsed.bbox, { category, priceLevel }, { isCurator: cur })
+  const places = await findPlacesInBbox(parsed.bbox, { category }, { isCurator: cur })
 
   return NextResponse.json({ places, viewer: who }, noStore)
 }

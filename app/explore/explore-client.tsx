@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DEFAULT_CENTER, DEFAULT_ZOOM } from '@/lib/map-tiles'
 import { buildBbox, isSameBbox } from '@/lib/map-bbox'
-import { CATEGORY_LABELS, PLACE_CATEGORIES, PRICE_LABELS, PRICE_LEVELS } from '@/lib/enums'
+import { CATEGORY_LABELS, PLACE_CATEGORIES } from '@/lib/enums'
 import { formatPlanMoment } from '@/lib/plan-dates'
 import type { PlanSummary } from '@/lib/plans'
 import {
@@ -45,12 +45,11 @@ const ExploreMap = dynamic(() => import('./explore-map'), {
 /**
  * Los filtros se arman con las listas del dominio, NO con arrays escritos aca.
  *
- * Este archivo tenia su propia copia con `CHEAP`, `MODERATE`, `EXPENSIVE` y
- * `LUXURY`, y **ninguno** de esos valores existe en el enum, que es
- * `FREE/LOW/MEDIUM/HIGH`. Elegir un precio mandaba un `?priceLevel=CHEAP` y
- * recebia un 400: el filtro estaba roto y el unico test de sincronia comparaba
- * `lib/validation.ts` contra Prisma, donde las dos listas estaban bien. El que
- * mentia era esta copia.
+ * Este archivo tenia su propia copia de los filtros, con valores que
+ * **ninguno** existia en el enum del dominio. Elegir uno mandaba una query con
+ * un valor invalido y recibia un 400: el filtro estaba roto y el unico test de
+ * sincronia comparaba `lib/validation.ts` contra Prisma, donde las dos listas
+ * estaban bien. El que mentia era esta copia.
  *
  * Importar hace que la desincronizacion sea imposible en vez de detectable.
  */
@@ -59,17 +58,11 @@ const CATEGORIES = [
   ...PLACE_CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABELS[c] })),
 ]
 
-const PRICE_OPTIONS = [
-  { value: '', label: '$$' },
-  ...PRICE_LEVELS.map((p) => ({ value: p, label: PRICE_LABELS[p] })),
-]
-
 export default function ExploreClient() {
   const [center, setCenter] = useState(DEFAULT_CENTER)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
   const [bbox, setBbox] = useState(() => buildBbox(DEFAULT_CENTER, DEFAULT_ZOOM))
   const [category, setCategory] = useState('')
-  const [priceLevel, setPriceLevel] = useState('')
 
   const [places, setPlaces] = useState<PlaceFeature[]>([])
   const [plans, setPlans] = useState<PlanSummary[]>([])
@@ -113,7 +106,6 @@ export default function ExploreClient() {
 
     const placeQuery = new URLSearchParams({ bbox: bboxString(bbox) })
     if (category) placeQuery.set('category', category)
-    if (priceLevel) placeQuery.set('priceLevel', priceLevel)
 
     try {
       const [placesRes, plansRes] = await Promise.all([
@@ -148,16 +140,16 @@ export default function ExploreClient() {
     } finally {
       setLoading(false)
     }
-  }, [bbox, category, priceLevel])
+  }, [bbox, category])
 
   useEffect(() => {
     void load()
   }, [load])
 
   /**
-   * Los filtros no recargan. Un mapa con un select de categoria dispara el
-   * `onchange` una vez, pero un slider de precio lo dispara en cada pixel de
-   * arrastre: sin este corte, 40 peticiones para elegir un precio.
+   * Los filtros no recargan. Un select dispara el `onchange` una vez sola, pero
+   * un control de arrastre lo dispara en cada pixel: sin este corte, decenas de
+   * peticiones para un solo filtro.
    */
   const reloadForFilters = useCallback(() => {
     setBbox((prev) => ({ ...prev }))
@@ -219,16 +211,6 @@ export default function ExploreClient() {
               {CATEGORIES.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Precio
-            <select value={priceLevel} onChange={(e) => setPriceLevel(e.target.value)}>
-              {PRICE_OPTIONS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
                 </option>
               ))}
             </select>

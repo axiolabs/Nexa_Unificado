@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { hashPassword } from '../../lib/auth/password'
 import { Client } from '../helpers/http'
+import { fuentesDeRuta } from '../helpers/chunks'
 import { addRole, closeDb, createPlace, createUser, resetDb } from '../helpers/db'
 
 /**
@@ -114,19 +115,9 @@ describe('GET /host/planes/nuevo', () => {
 
   it('el selector pega al endpoint con rol, no al publico', async () => {
     // La URL del `fetch` vive en el chunk del cliente, no en el HTML: por eso
-    // este test baja los chunks que la pagina referencia y busca en el
-    // contenido. Verificarlo en el HTML daria verde siempre.
-    const c = await loginAs(host.email)
-    const { text } = await c.get('/host/planes/nuevo')
-    const chunks = [...text.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map(
-      (m) => m[0],
-    )
-    expect(chunks.length).toBeGreaterThan(0)
-
-    const fuentes = await Promise.all(
-      [...new Set(chunks)].map((p) => c.get(p).then((r) => r.text as string)),
-    )
-    const joined = fuentes.join('\n')
+    // este test lee el bundle de la pagina y busca en el contenido.
+    // Verificarlo en el HTML daria verde siempre.
+    const joined = fuentesDeRuta('/host/planes/nuevo')
     expect(joined, 'el selector deberia pegarle al endpoint con rol').toContain('/api/host/places')
     // Y no al publico: pegarle al publico es el bug que hace que un curador
     // ofrezca lugares pendientes que el POST va a rechazar.

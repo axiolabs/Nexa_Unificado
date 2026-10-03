@@ -201,7 +201,6 @@ describe('GET /api/host/places', () => {
       'longitude',
       'name',
       'openPlanCount',
-      'priceLevel',
     ])
     expect(row.latitude).toBeTypeOf('number')
     expect(row.latitude).not.toBeTypeOf('string')

@@ -26,7 +26,6 @@ describe('deriva de zona horaria en Plan.startsAt', () => {
           create: {
             name: 'tz probe place',
             category: 'CAFE',
-            priceLevel: 'LOW',
             latitude: -34.6,
             longitude: -58.38,
             timezone: 'America/Argentina/Buenos_Aires',

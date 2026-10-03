@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
-import { PlaceCategory, PriceLevel } from '@prisma/client'
+import { PlaceCategory } from '@prisma/client'
 import { hashPassword } from '../../lib/auth/password'
-import { CATEGORY_LABELS, PLACE_CATEGORIES, PRICE_LABELS, PRICE_LEVELS } from '../../lib/enums'
+import { CATEGORY_LABELS, PLACE_CATEGORIES } from '../../lib/enums'
 import { Client } from '../helpers/http'
 import {
   addRole,
@@ -42,7 +42,6 @@ type PlaceRow = {
   name: string
   description: string | null
   category: string
-  priceLevel: string
   latitude: number
   longitude: number
   openPlanCount: number
@@ -149,7 +148,6 @@ describe('GET /api/places', () => {
         'longitude',
         'name',
         'openPlanCount',
-        'priceLevel',
       ])
     }
   })
@@ -188,22 +186,21 @@ describe('GET /api/places', () => {
     expect(namesOf(res)).toEqual(['Museo Test'])
   })
 
-  it('filtra por precio', async () => {
-    await createPlace({ name: 'Bar Caro', priceLevel: 'HIGH', lat: -34.6028, lng: -58.3798 })
-    const res = await new Client().get(`/api/places?bbox=${BA}&priceLevel=HIGH`)
-    expect(res.status).toBe(200)
-    expect(namesOf(res)).toContain('Bar Caro')
-  })
-
   it('una categoria inventada da 400, no 500', async () => {
     const res = await new Client().get(`/api/places?bbox=${BA}&category=INVENTADA`)
     expect(res.status).toBe(400)
     expect((res.body as { error: string }).error).toMatch(/categoria|category/i)
   })
 
-  it('un precio inventado da 400', async () => {
-    const res = await new Client().get(`/api/places?bbox=${BA}&priceLevel=GRATIS`)
-    expect(res.status).toBe(400)
+  // Nexa es gratis: no hay niveles de precio ni filtro de precio. Este test fija
+  // que el parametro muerto se IGNORA en vez de romper: un link viejo con
+  // `?priceLevel=HIGH` guardado, o un cliente viejo desplegado, no pueden
+  // convertir la pantalla del mapa en un error.
+  it('ignora el priceLevel de links viejos, sin 400', async () => {
+    await createPlace({ name: 'Bar Caro', lat: -34.6028, lng: -58.3798 })
+    const res = await new Client().get(`/api/places?bbox=${BA}&priceLevel=HIGH`)
+    expect(res.status).toBe(200)
+    expect(namesOf(res)).toContain('Bar Caro')
   })
 
   it('un bbox invalido da 400 con el motivo', async () => {
@@ -350,13 +347,6 @@ describe('GET /api/places?q=', () => {
     // verde, porque el lugar es de esa categoria y coincide de todos modos.
     const otraCat = await new Client().get('/api/places?q=Aprobado&category=PARK')
     expect(placesOf(otraCat)).toEqual([])
-
-    const porPrecio = await new Client().get('/api/places?q=Aprobado&priceLevel=EXPENSIVE')
-    expect(porPrecio.status).toBe(400)
-    const otroPrecio = await new Client().get(
-      `/api/places?q=Aprobado&priceLevel=${PRICE_LEVELS[PRICE_LEVELS.length - 1]}`,
-    )
-    expect(placesOf(otroPrecio)).toEqual([])
   })
 
   it('una categoria inventada da 400 tambien por el camino de la busqueda', async () => {
@@ -514,20 +504,11 @@ describe('sincronia de las listas cerradas con los enums', () => {
     expect([...PLACE_CATEGORIES].sort()).toEqual(fromEnum)
   })
 
-  it('PRICE_LEVELS coincide con el enum de Prisma', () => {
-    const fromEnum = Object.values(PriceLevel).sort()
-    expect([...PRICE_LEVELS].sort()).toEqual(fromEnum)
-  })
-
   it('toda categoria tiene etiqueta, y ninguna etiqueta sobra', () => {
     // Un enum nuevo sin etiqueta se renderiza como `<option>{undefined}</option>`
     // y no rompe el build: se ve roto en la pantalla y nada mas. Y una etiqueta
     // sin valor al que corresponda es un filtro que la API va a rechazar con 400
     // si alguien lo selecciona.
     expect(Object.keys(CATEGORY_LABELS).sort()).toEqual([...PLACE_CATEGORIES].sort())
-  })
-
-  it('todo precio tiene etiqueta, y ninguna etiqueta sobra', () => {
-    expect(Object.keys(PRICE_LABELS).sort()).toEqual([...PRICE_LEVELS].sort())
   })
 })

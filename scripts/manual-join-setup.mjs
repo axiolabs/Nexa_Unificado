@@ -58,7 +58,6 @@ const place = await prisma.place.create({
   data: {
     name: LUGAR,
     category: 'CAFE',
-    priceLevel: 'LOW',
     latitude: -34.6037,
     longitude: -58.3816,
     timezone: 'America/Argentina/Buenos_Aires',

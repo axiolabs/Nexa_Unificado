@@ -101,15 +101,14 @@ describe('registro: lo que queda guardado', () => {
     expect(rows[0].passwordHash).not.toContain(PASSWORD)
   })
 
-  it('el registro asigna el rol USER y deja la cuenta activa y FREE', async () => {
+  it('el registro asigna el rol USER y deja la cuenta activa', async () => {
     await new Client().register('Ana Ruiz', 'ana@example.com', PASSWORD)
 
-    const users = await rawQuery<{ planTier: string; isActive: boolean }>(
-      'SELECT "planTier", "isActive" FROM "User" WHERE email = $1',
+    const users = await rawQuery<{ isActive: boolean }>(
+      'SELECT "isActive" FROM "User" WHERE email = $1',
       ['ana@example.com'],
     )
     expect(users).toHaveLength(1)
-    expect(users[0].planTier).toBe('FREE')
     expect(users[0].isActive).toBe(true)
 
     const roles = await rawQuery<{ role: string }>(

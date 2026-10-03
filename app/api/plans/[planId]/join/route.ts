@@ -5,8 +5,16 @@ import { getPrisma } from '@/lib/db'
 import { assertSameOrigin, fail } from '@/lib/http'
 import { isRetryableDbError } from '@/lib/prisma-errors'
 
-/** Ventana que tiene el organizador para responder antes de que la peticion venza. */
-export const REQUEST_TTL_HOURS = 24
+/**
+ * Ventana que tiene el organizador para responder antes de que la peticion venza.
+ *
+ * NO se exporta, a proposito: un archivo `route.ts` de Next solo puede exportar
+ * los handlers (`GET`, `POST`, ...) y su `config`. Cualquier otro export rompe el
+ * type check del build con un error que nombra la constante y no la regla que la
+ * prohibe, y el mensaje deja en pensar que el problema es el tipo. Lo que si se
+ * puede exportar vive en `lib/`, y aca no hace falta: nadie mas lo usa.
+ */
+const REQUEST_TTL_HOURS = 24
 
 /**
  * POST /api/plans/[planId]/join

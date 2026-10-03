@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { hashPassword } from '../../lib/auth/password'
 import { getPrisma } from '../../lib/db'
 import { Client } from '../helpers/http'
+import { fuentesDeRuta } from '../helpers/chunks'
 import { addRole, closeDb, createPlace, createPlan, createUser, resetDb } from '../helpers/db'
 
 /**
@@ -57,15 +58,9 @@ async function loginAs(email: string): Promise<Client> {
   return c
 }
 
-/** Los fuentes de los chunks que carga la pagina. */
-async function fuentesDe(c: Client, ruta: string): Promise<string> {
-  const { text } = await c.get(ruta)
-  const chunks = [
-    ...new Set([...text.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map((m) => m[0])),
-  ]
-  expect(chunks.length).toBeGreaterThan(0)
-  const fuentes = await Promise.all(chunks.map((p) => c.get(p).then((r) => r.text as string)))
-  return fuentes.join('\n')
+/** Los fuentes de los chunks que carga la pagina. Ver `tests/helpers/chunks.ts`. */
+function fuentesDe(_c: Client, ruta: string): string {
+  return fuentesDeRuta(ruta)
 }
 
 describe('/host/requests', () => {

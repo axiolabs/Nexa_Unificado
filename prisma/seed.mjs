@@ -61,32 +61,32 @@ const prisma = new PrismaClient({ adapter })
  */
 const PLACES = [
   {
-    name: 'Monumento a los Nevados', category: 'PARK', priceLevel: 'FREE', lat: 5.0758, lng: -75.5146,
+    name: 'Monumento a los Nevados', category: 'PARK', lat: 5.0758, lng: -75.5146,
     desc: 'El simbolo de Manizales, en el centro, al pie del cable.',
     traits: { nueva_gente: 0.5, charlas: 0.4, actividad: 0.4, improvisar: 0.6, ambiente_calmo: 0.2 },
   },
   {
-    name: 'Parque del Cafe', category: 'PARK', priceLevel: 'MEDIUM', lat: 5.1519, lng: -75.4925,
+    name: 'Parque del Cafe', category: 'PARK', lat: 5.1519, lng: -75.4925,
     desc: 'Paisaje cafetero, mirador y vista del valle desde la montana.',
     traits: { nueva_gente: 0.4, charlas: 0.3, actividad: 1, improvisar: 0.4, ambiente_calmo: 0.5 },
   },
   {
-    name: 'Museo de Arte Moderno de Manizales', category: 'MUSEUM', priceLevel: 'FREE', lat: 5.0706, lng: -75.5209,
+    name: 'Museo de Arte Moderno de Manizales', category: 'MUSEUM', lat: 5.0706, lng: -75.5209,
     desc: null,
     traits: { nueva_gente: 0.4, charlas: 0.3, actividad: 0.8, improvisar: 0.1, ambiente_calmo: 0.7 },
   },
   {
-    name: 'Biblioteca Publica Municipal', category: 'LIBRARY', priceLevel: 'FREE', lat: 5.0731, lng: -75.5188,
+    name: 'Biblioteca Publica Municipal', category: 'LIBRARY', lat: 5.0731, lng: -75.5188,
     desc: null,
     traits: { nueva_gente: 0.1, charlas: 0.2, actividad: 0.1, improvisar: 0, ambiente_calmo: 1 },
   },
   {
-    name: 'Universidad de Caldas', category: 'OTHER', priceLevel: 'FREE', lat: 5.0672, lng: -75.5293,
+    name: 'Universidad de Caldas', category: 'OTHER', lat: 5.0672, lng: -75.5293,
     desc: 'Campus con espacios abiertos y gente nueva todo el tiempo.',
     traits: { nueva_gente: 0.8, charlas: 0.7, actividad: 0.5, improvisar: 0.5, ambiente_calmo: 0.3 },
   },
   {
-    name: 'Rio Blanco', category: 'PARK', priceLevel: 'FREE', lat: 5.0745, lng: -75.5298,
+    name: 'Rio Blanco', category: 'PARK', lat: 5.0745, lng: -75.5298,
     desc: 'El rio que atraviesa la ciudad, con senderos para caminar.',
     // Peso NEGATIVO a proposito: `ambiente_calmo` no es " irrelevante" en un
     // espacio concurrido, es lo contrario de lo que la persona busca. El signo
@@ -95,12 +95,12 @@ const PLACES = [
     traits: { nueva_gente: 0.6, charlas: 0.5, actividad: 0.9, improvisar: 0.8, ambiente_calmo: -0.6 },
   },
   {
-    name: 'Cable Plaza', category: 'OTHER', priceLevel: 'MEDIUM', lat: 5.0703, lng: -75.5183,
+    name: 'Cable Plaza', category: 'OTHER', lat: 5.0703, lng: -75.5183,
     desc: null,
     traits: { nueva_gente: 0.5, charlas: 0.4, actividad: 0.4, improvisar: 0.3, ambiente_calmo: 0.2 },
   },
   {
-    name: 'Termas de Manizales', category: 'OTHER', priceLevel: 'MEDIUM', lat: 5.0843, lng: -75.5495,
+    name: 'Termas de Manizales', category: 'OTHER', lat: 5.0843, lng: -75.5495,
     desc: 'Aguas termales, plan de un finde entero.',
     traits: { nueva_gente: 0.4, charlas: 0.3, actividad: 0.8, improvisar: 0.2, ambiente_calmo: 0.8 },
   },
@@ -142,7 +142,6 @@ for (const p of PLACES) {
         name: p.name,
         description: p.desc,
         category: p.category,
-        priceLevel: p.priceLevel,
         latitude: new Prisma.Decimal(p.lat),
         longitude: new Prisma.Decimal(p.lng),
         city: CIUDAD,

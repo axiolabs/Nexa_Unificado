@@ -169,7 +169,6 @@ export async function setDeleted(userId: string, deleted: boolean) {
 export async function createPlace(opts: {
   name: string
   category?: string
-  priceLevel?: string
   lat: number
   lng: number
   verificationStatus?: string
@@ -178,15 +177,14 @@ export async function createPlace(opts: {
 }) {
   const id = await client.query<{ id: string }>(
     `INSERT INTO "Place"
-       (id, name, category, "priceLevel", latitude, longitude, timezone,
+       (id, name, category, latitude, longitude, timezone,
         "verificationStatus", "isActive", "deletedAt", "createdAt", "updatedAt")
-     VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, 'America/Argentina/Buenos_Aires',
-             $6, $7, $8, now(), now())
+     VALUES (gen_random_uuid()::text, $1, $2, $3, $4, 'America/Argentina/Buenos_Aires',
+             $5, $6, $7, now(), now())
      RETURNING id`,
     [
       opts.name,
       opts.category ?? 'CAFE',
-      opts.priceLevel ?? 'LOW',
       opts.lat,
       opts.lng,
       opts.verificationStatus ?? 'APPROVED',

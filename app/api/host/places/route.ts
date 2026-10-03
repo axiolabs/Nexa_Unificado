@@ -5,7 +5,7 @@ import { fail } from '@/lib/http'
 import { searchPlaces } from '@/lib/places'
 
 /**
- * GET /api/host/places?q=texto&category=&priceLevel=
+ * GET /api/host/places?q=texto&category=
  *
  * El selector de lugares del formulario de creacion de plan. Es un endpoint
  * DISTINTO de `/api/places?q=` y no un parametro extra, por una razon que
@@ -40,10 +40,9 @@ export async function GET(req: Request) {
     return fail(400, 'La busqueda necesita al menos 2 caracteres')
   }
 
-  // Las categorias y precios se validan contra la lista cerrada igual que en el
-  // endpoint publico. Este handler no los acepta todavia: el formulario de
-  // creacion no ofrece esos filtros, y aceptarlos sin validarlos seria una
-  // puerta que se puede abrir en el futuro sin que nadie la mire.
+  // Este handler no acepta filtros de la query: el formulario de creacion no los
+  // ofrece, y aceptarlos sin validarlos seria una puerta que se puede abrir en el
+  // futuro sin que nadie la mire.
   const result = await searchPlaces(q, {}, { planableOnly: true })
 
   return NextResponse.json(result, { headers: { 'cache-control': 'private, no-store' } })

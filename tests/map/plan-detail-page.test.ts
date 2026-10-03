@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { hashPassword } from '../../lib/auth/password'
 import { Client } from '../helpers/http'
+import { fuentesDeRuta } from '../helpers/chunks'
 import { addRole, closeDb, createPlace, createPlan, createUser, rawQuery, resetDb } from '../helpers/db'
 
 /**
@@ -100,36 +101,14 @@ describe('GET /planes/[planId]', () => {
     // Lo mismo que el `fetch`: la pantalla es un Client Component, asi que el
     // `Link` no aparece en el HTML inicial. La version anterior de este test
     // afirmaba `/explore` en el HTML y daba verde solo por accidente: el link
-    // nunca estuvo ahi. Se busca en el chunk, que es donde vive de verdad.
-    const c = await loginAs(ana.email)
-    const { text } = await c.get(`/planes/${plan.id}`)
-    const chunks = [
-      ...new Set(
-        [...text.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map((m) => m[0]),
-      ),
-    ]
-    const fuentes = await Promise.all(
-      chunks.map((p) => c.get(p).then((r) => r.text as string)),
-    )
-    expect(fuentes.join('\n')).toContain('/explore')
+    // nunca estuvo ahi. Se busca en el bundle, que es donde vive de verdad.
+    expect(fuentesDeRuta('/planes/[planId]')).toContain('/explore')
   })
 
   it('el client pide el detalle al endpoint, y no inventa la URL', async () => {
-    // Como los datos no estan en el HTML, el `fetch` vive en el chunk. Un test
+    // Como los datos no estan en el HTML, el `fetch` vive en el bundle. Un test
     // que buscara la URL en el HTML daria verde siempre.
-    const c = await loginAs(ana.email)
-    const { text } = await c.get(`/planes/${plan.id}`)
-    const chunks = [
-      ...new Set(
-        [...text.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map((m) => m[0]),
-      ),
-    ]
-    expect(chunks.length).toBeGreaterThan(0)
-
-    const fuentes = await Promise.all(
-      chunks.map((p) => c.get(p).then((r) => r.text as string)),
-    )
-    const joined = fuentes.join('\n')
+    const joined = fuentesDeRuta('/planes/[planId]')
     // El endpoint del detalle: sin esto, la pantalla no tendria de donde sacar el
     // `viewer` que decide el estado del boton.
     expect(joined).toContain('/api/plans/')
@@ -237,19 +216,9 @@ describe('lo que la pantalla necesita del endpoint', () => {
  */
 describe('el chat vive en el detalle', () => {
   it('el chunk del detalle llama al endpoint de mensajes', async () => {
-    const c = await loginAs(ana.email)
-    const { text } = await c.get(`/planes/${plan.id}`)
-    const chunks = [
-      ...new Set(
-        [...text.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map((m) => m[0]),
-      ),
-    ]
-    const fuentes = await Promise.all(
-      chunks.map((p) => c.get(p).then((r) => r.text as string)),
-    )
     // Si el chat no estuviera montado, el chunk no tendria esta URL y la
     // pantalla no tendria de donde leer.
-    expect(fuentes.join('\n')).toContain('/messages')
+    expect(fuentesDeRuta('/planes/[planId]')).toContain('/messages')
   })
 
   it('el chat del detalle abre para un ACCEPTED y el endpoint lo confirma', async () => {
@@ -346,36 +315,15 @@ describe('el chat vive en el detalle', () => {
  */
 describe('se puede llegar al detalle', () => {
   it('el listado del mapa ofrece un enlace por plan', async () => {
-    const c = await loginAs(ana.email)
-    const { text } = await c.get('/explore')
     // El listado es un Client Component, asi que los enlaces de los planes viven
     // en el chunk, no en el HTML. Buscarlos en el HTML daria verde por siempre.
-    const chunks = [
-      ...new Set(
-        [...text.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map((m) => m[0]),
-      ),
-    ]
-    const fuentes = await Promise.all(
-      chunks.map((p) => c.get(p).then((r) => r.text as string)),
-    )
-    const joined = fuentes.join('\n')
-    expect(joined).toContain('/planes/')
+    expect(fuentesDeRuta('/explore')).toContain('/planes/')
   })
 
   it('el enlace del listado apunta al id del plan, no a una pagina fija', async () => {
-    const c = await loginAs(ana.email)
-    const { text } = await c.get('/explore')
-    const chunks = [
-      ...new Set(
-        [...text.matchAll(/\/_next\/static\/chunks\/[a-zA-Z0-9_.-]+\.js/g)].map((m) => m[0]),
-      ),
-    ]
-    const fuentes = await Promise.all(
-      chunks.map((p) => c.get(p).then((r) => r.text as string)),
-    )
     // La plantilla del enlace tiene que interpolar el id. Un `/planes/` a secas
     // compila y lleva a un 404, y ningun test lo veria.
-    expect(fuentes.join('\n')).toMatch(/\/planes\/\$\{|concat\("\/planes\/"/)
+    expect(fuentesDeRuta('/explore')).toMatch(/\/planes\/\$\{|concat\("\/planes\/"/)
   })
 
   it('el exito de crear el plan lleva al detalle, no a un texto sin salida', async () => {

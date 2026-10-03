@@ -37,8 +37,6 @@ erDiagram
         string id PK
         string email UK
         string passwordHash
-        PlanTier planTier
-        datetime premiumUntil
         datetime suspendedAt
     }
     UserRoleAssignment {
@@ -62,7 +60,6 @@ erDiagram
         string id PK
         string name
         PlaceCategory category
-        PriceLevel priceLevel
         decimal latitude
         decimal longitude
         PlaceVerificationStatus verificationStatus
@@ -175,8 +172,6 @@ erDiagram
 
 ```mermaid
 erDiagram
-    User ||--o{ Payment : "paga"
-    Plan ||--o{ Payment : "se paga con"
     Place ||--o{ Event : "sede"
     User ||--o{ Event : "organiza"
     Event ||--o{ Plan : "convoca"
@@ -200,7 +195,7 @@ Esta es la tabla que importa. Cada regla del `.docx` y el mecanismo que la vuelv
 | **"Nexa no conecta personas directamente"** (§0) | No existe tabla de conversaciones ni columna `recipientId`. No hay forma de modelar un chat 1:1. |
 | **"Chat solo dentro de planes"** (§2.5) | `Message.planId` es NOT NULL, **y** `Message` tiene FK compuesta `(planId, authorId) → PlanParticipant(planId, userId)`. No se puede insertar un mensaje sin plan, ni por alguien que no participa. Doble barrera, en la base de datos. |
 | **"Sin mensajes en frío"** (§2.5) | Consecuencia directa: no existe ruta de modelo para escribirle a un usuario. El único canal de escritura es `Message`, y exige una participación previa. |
-| **Freemium vs Premium** (§1.1) | `User.planTier` + `User.premiumUntil`. |
+| **Nexa es gratis, sin tiers ni pagos** (§1.1) | No existe `User.planTier`, ni `premiumUntil`, ni tablas `Payment`/`Subscription`. No hay superficie de cobro en el esquema, y no hay nada que apagar si el negocio cambia de opinión: se agrega en su momento. |
 | **Solo lugares verificados visibles** (§13.5) | `Place.verificationStatus` (PENDING/APPROVED/REJECTED) + `verifiedById`/`verifiedAt` para auditoría. Índice compuesto para que el filtro sea el camino por defecto del planner. |
 | **Unirse requiere aprobación** (§2.4) | `PlanParticipant.status` nace en `REQUESTED`; solo el `ORGANIZER` transiciona a `ACCEPTED`. Ver §5.8 para la auto-resolución por timeout. |
 | **Cancelar no borra historial** (§2.4) | Cancelación es `status = CANCELLED`, no `DELETE`. Preserva la confianza y permite `NO_SHOW`. |
@@ -223,9 +218,7 @@ Esta es la tabla que importa. Cada regla del `.docx` y el mecanismo que la vuelv
 | Enum | Valores | Nota |
 |---|---|---|
 | `UserRole` | USER, HOST, MODERATOR, CURATOR, ADMIN | Auto-registro: USER y HOST. Los otros tres son de equipo, se otorgan. |
-| `PlanTier` | FREE, PREMIUM | Ver §5.2 para la ruta de migración si aparecen más tiers. |
 | `PlaceCategory` | CAFE, RESTAURANT, MUSEUM, PARK, WORKSHOP, SPORTS, BAR, LIBRARY, OTHER | Filtros del módulo de exploración. |
-| `PriceLevel` | FREE, LOW, MEDIUM, HIGH | |
 | `PlaceVerificationStatus` | PENDING, APPROVED, REJECTED | Curaduría (§13.5). |
 | `PlanStatus` | OPEN, CANCELLED, COMPLETED | `FULL` se deriva, no se guarda. |
 | `ParticipantRole` | ORGANIZER, PARTICIPANT | El organizador aprueba y descarta. |
@@ -254,9 +247,11 @@ ORDER BY alignment DESC;
 
 Cuando la IA entre (§5 del spec), se suma ranking semántico **encima** de esta base. El modelo no cambia.
 
-### 5.2 `PlanTier` como enum, no como tabla
+### 5.2 Sin tiers: el producto es gratis
 
-Pides freemium/premium en el usuario, así que va ahí. Limitación real: no puedes tener "planes" con contenido editable, ni tiers por categoría, ni precios. **Disparador de migración:** cuando el negocio pida un tercer nivel o perks configurables, se convierte en `User.tierId → Tier(id, key, priceId)` y se cambia `@default(FREE)` por `@default(cuid())` + lookup. Migración de datos, no de código de aplicación.
+El spec pedía freemium/premium y el slice lo implementó con `User.planTier` + `User.premiumUntil`. **Se eliminaron los dos** junto con el enum `PlanTier`: no hay cobro, ni prueba, ni periodo de gracia, ni nada que los justifique. Un `premiumUntil` que nadie puede leer en la app es un campo que solo se desincroniza. Si el negocio cambia de opinión, el pago entra después, con su propio diseño (tabla `Payment`, no una columna más), y no como un parche sobre un enum que nunca se usó.
+
+La lección que sí queda: cuando un modelo tiene un campo que ninguna pantalla lee, el costo no es el campo. Es que la base declara un contrato que la app no cumple.
 
 ### 5.3 Roles en tabla aparte, no enum en `User`
 
@@ -465,16 +460,15 @@ Regla: **una entidad diferida apunta hacia afuera, a tablas ya estables. Nunca a
 
 | Entidad futura | Referencia a tablas existentes | Qué hay que agregar a las tablas de hoy |
 |---|---|---|
-| `Payment` | `→ User`, `→ Plan` | Solo nullable: `User.stripeCustomerId`, `User.stripeSubscriptionId`. Sin cambio de tipo ni de datos existentes. |
 | `Event` | `→ Place`, `→ User` (organizer) | Solo nullable: `Plan.eventId`. Permite que un plan sea espontáneo o una sesión de un evento curado. |
-| `ModerationReport` | `→ User`, `→ Plan`, `→ Message` | Nada. El soft-delete ya está puesto. |
-| `Subscription` | `→ User` | `User.planTier` ya está: la suscripción lo refleja. |
 | `Notification` | `→ User`, `→ Plan` | Nada. Requiere la decisión de §5.10. |
 | `UserTrustSignal` | `→ User` | Nada. Agregado derivado de `PlanParticipant.status`. Se materializa solo si el ranking pasa ~200 ms (§5.9). |
 
+**El pago no está diferido, está cancelado.** `Payment` y `Subscription` no son trabajo pendiente: el producto es gratis y no hay cobro que diseñar todavía. Cuando exista, se diseña entero (y casi seguro no con las columnas que el slice llegó a tener). `User.stripeCustomerId` ya no existe precisamente para que esa tabla llegue cuando haya algo real que guardarle.
+
 **`Host` no necesita ninguna tabla.** `Place.ownerId` ya apunta a `User`, y el rol sale de `UserRoleAssignment`. Cuando llegue el módulo de Host, lo que se agrega es *funcionalidad* (publicar eventos, métricas, cobros), no estructura.
 
-Costo de añadir las seis después: una migración con columnas nullable y tablas nuevas. **Cero cambios en el esquema de hoy.**
+Costo de añadir las tres después: una migración con columnas nullable y tablas nuevas. **Cero cambios en el esquema de hoy.**
 
 ---
 
@@ -482,7 +476,7 @@ Costo de añadir las seis después: una migración con columnas nullable y tabla
 
 | Consulta caliente | Índice que la sirve |
 |---|---|
-| "Lugares cerca de mí, verificados, categoría X, precio Y" | `Place(verificationStatus, category, priceLevel)` + `Place(latitude, longitude)` para el bounding box |
+| "Lugares cerca de mí, verificados, categoría X" | `Place(verificationStatus, category)` + `Place(latitude, longitude)` para el bounding box |
 | "Mis planes" (pantalla más frecuente del producto) | `PlanParticipant(userId, status)`. La PK `(planId, userId)` solo sirve el lado plan. |
 | "Quiénes van a este plan" | PK de `PlanParticipant` |
 | "Mensajes del plan en orden" | `Message(planId, createdAt)` |
@@ -532,7 +526,7 @@ Honestidad importante. Estas reglas las valida la capa de servicio, no la base d
 
    Esa query debería devolver 0 filas siempre. Si devuelve algo, hay un bug de aceptaciones/cancelaciones. Correla como check periódico; es más barato que un `COUNT` en cada join al plan.
 5. **El organizador debe ser participante.** No hay constraint que lo impida; se fuerza al crear el plan (inserta al creador como `ORGANIZER` + `ACCEPTED` en la misma transacción).
-6. **`premiumUntil` no es una garantía de tier activo.** El valor efectivo es `planTier = PREMIUM AND premiumUntil > now()`. Ojo con la zona horaria: comparar timestamps en UTC.
+6. **No hay gating por pago.** No existe `planTier` ni `premiumUntil`: todas las pantallas se abren igual para cualquiera con sesión. Cuando exista un cobro, el gate va en la capa de servicio, no en una columna que el cliente pueda leer.
 7. **Email sin normalizar.** `email` es `unique` pero "Stiven@x.com" y "stiven@x.com" son distintos. Normalizar a minúsculas en la capa de servicio, o con un índice funcional `LOWER(email)` en migración.
 8. **El `ON` de `Place.verificationStatus` no es un default por defecto.** Nadie ve un lugar hasta aprobarlo, pero eso es una condición del query de exploración, no una restricción.
 9. **La lista de quién estuvo y la de quién califica se filtran en la capa de servicio, y el filtro depende de quién mira.** `GET /api/plans/[planId]` devuelve `count` y `average` de las calificaciones a cualquiera que vea el plan, el conteo agregado de etiquetas (`tags`) también, el voto propio a quien lo pueda hacer, y la lista con nombres y etiquetas **solo al organizador**: `detail` es `null` para los demás. Lo mismo con los participantes: el `NO_SHOW` **desaparece de la lista entera** para quien no organiza, no solo con el `status` en `null`. Esto no se puede expresar como un `where` fijo de la query, porque depende de si el viewer es el creador y eso se sabe recién con el resultado de la misma consulta. Ver §16.6, §16.7 y §16.10 de `docs/decisiones-auth.md`.
@@ -545,7 +539,7 @@ Honestidad importante. Estas reglas las valida la capa de servicio, no la base d
 1. **Unirse a un plan requiere aprobación** del organizador, no auto-join. Es lo coherente con "Nexa no conecta personas directamente": el plan es un contexto que alguien controla. **Confirmado.** Con auto-resolución por timeout según §5.8.
 2. **Todo plan ocurre en un lugar** (`placeId` obligatorio). No hay planes virtuales ni "en cualquier parte".
 3. **Se califica después del plan, y solo si asististe** (`ATTENDED`). **Confirmado e implementado** (§16 de `docs/decisiones-auth.md`): la ventana se deriva de la hora del plan, no de un `status` que nadie escribe, y el gate vive en la capa de servicio, no en el esquema.
-4. **Los planes son gratuitos en el slice.** El precio entra con `Event`/`Payment`.
+4. **Los planes son gratuitos, sin excepción.** No es una limitación del slice: el producto no cobra. Si algún día cobra, es un módulo nuevo, no una columna que hoy se está reservando.
 5. **El test de personalidad no es bloqueante en el esquema.** Que sea obligatorio antes de explorar es regla de UI, no de datos. Si debe ser bloqueante, se resuelve con un check en el API, no con una FK.
 6. **Los 3 roles de equipo no se auto-asignan.** `UserRoleAssignment` con `grantedById` los otorga alguien con ADMIN.
 
